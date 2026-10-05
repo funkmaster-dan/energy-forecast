@@ -1,0 +1,764 @@
+{
+  "$defs": {
+    "Bank": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,31}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "dc_kwp": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Dc Kwp",
+          "type": "number"
+        },
+        "tilt": {
+          "maximum": 90,
+          "minimum": 0,
+          "title": "Tilt",
+          "type": "number"
+        },
+        "azimuth": {
+          "exclusiveMaximum": 360,
+          "minimum": 0,
+          "title": "Azimuth",
+          "type": "number"
+        },
+        "inverter_group": {
+          "default": "main",
+          "title": "Inverter Group",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        },
+        "conversion_efficiency": {
+          "default": 0.96,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Conversion Efficiency",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "dc_kwp",
+        "tilt",
+        "azimuth"
+      ],
+      "title": "Bank",
+      "type": "object"
+    },
+    "Battery": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity_kwh": {
+          "default": 10,
+          "exclusiveMinimum": 0,
+          "maximum": 500,
+          "title": "Capacity Kwh",
+          "type": "number"
+        },
+        "reserve_kwh": {
+          "default": 2,
+          "minimum": 0,
+          "title": "Reserve Kwh",
+          "type": "number"
+        },
+        "upper_kwh": {
+          "default": 10,
+          "exclusiveMinimum": 0,
+          "title": "Upper Kwh",
+          "type": "number"
+        },
+        "charge_kw": {
+          "default": 3,
+          "exclusiveMinimum": 0,
+          "title": "Charge Kw",
+          "type": "number"
+        },
+        "discharge_kw": {
+          "default": 3,
+          "exclusiveMinimum": 0,
+          "title": "Discharge Kw",
+          "type": "number"
+        },
+        "eta_charge": {
+          "default": 0.95,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Eta Charge",
+          "type": "number"
+        },
+        "eta_discharge": {
+          "default": 0.95,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Eta Discharge",
+          "type": "number"
+        },
+        "standby_kw": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Standby Kw",
+          "type": "number"
+        },
+        "taper_start_pct": {
+          "default": 90,
+          "exclusiveMaximum": 100,
+          "minimum": 50,
+          "title": "Taper Start Pct",
+          "type": "number"
+        },
+        "parameter_source": {
+          "default": "configured usable capacity",
+          "title": "Parameter Source",
+          "type": "string"
+        },
+        "independent_stored_energy": {
+          "default": false,
+          "title": "Independent Stored Energy",
+          "type": "boolean"
+        }
+      },
+      "title": "Battery",
+      "type": "object"
+    },
+    "CalendarEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "format": "date",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "format": "date",
+          "title": "End",
+          "type": "string"
+        },
+        "start_time": {
+          "default": "00:00:00",
+          "format": "time",
+          "title": "Start Time",
+          "type": "string"
+        },
+        "end_time": {
+          "default": "00:00:00",
+          "format": "time",
+          "title": "End Time",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "school_holiday",
+            "public_holiday",
+            "household",
+            "pupil_free"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "profile": {
+          "default": "government",
+          "title": "Profile",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "known_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Known At"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "label",
+        "kind",
+        "source",
+        "version"
+      ],
+      "title": "CalendarEvent",
+      "type": "object"
+    },
+    "Calendars": {
+      "additionalProperties": false,
+      "properties": {
+        "public_jurisdiction": {
+          "default": "SA",
+          "enum": [
+            "ACT",
+            "NSW",
+            "NT",
+            "QLD",
+            "SA",
+            "TAS",
+            "VIC",
+            "WA"
+          ],
+          "title": "Public Jurisdiction",
+          "type": "string"
+        },
+        "school_jurisdiction": {
+          "default": "SA",
+          "enum": [
+            "ACT",
+            "NSW",
+            "NT",
+            "QLD",
+            "SA",
+            "TAS",
+            "VIC",
+            "WA"
+          ],
+          "title": "School Jurisdiction",
+          "type": "string"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "covered_years": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Covered Years",
+          "type": "array"
+        },
+        "school_profiles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "School Profiles",
+          "type": "array"
+        },
+        "school_combination": {
+          "default": "any",
+          "enum": [
+            "any",
+            "all"
+          ],
+          "title": "School Combination",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/CalendarEvent"
+          },
+          "maxItems": 5000,
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "title": "Calendars",
+      "type": "object"
+    },
+    "Mapping": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "mode": {
+          "default": "stitch",
+          "enum": [
+            "stitch",
+            "fallback",
+            "sum",
+            "derived"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Sources",
+          "type": "array"
+        },
+        "min_coverage": {
+          "default": 0.9,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Coverage",
+          "type": "number"
+        },
+        "maximum_kw": {
+          "default": 50,
+          "exclusiveMinimum": 0,
+          "title": "Maximum Kw",
+          "type": "number"
+        },
+        "resolution_minutes": {
+          "default": 60,
+          "enum": [
+            5,
+            15,
+            60
+          ],
+          "title": "Resolution Minutes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "feature",
+        "sources"
+      ],
+      "title": "Mapping",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid To"
+        },
+        "scale": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Scale",
+          "type": "number"
+        },
+        "sign": {
+          "default": 1,
+          "enum": [
+            -1,
+            1
+          ],
+          "title": "Sign",
+          "type": "integer"
+        },
+        "dc_to_ac_efficiency": {
+          "default": 0.96,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Dc To Ac Efficiency",
+          "type": "number"
+        },
+        "coefficient": {
+          "default": 1,
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Coefficient",
+          "type": "number"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Component"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "TariffRule": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "start": {
+          "default": "00:00:00",
+          "format": "time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "default": "00:00:00",
+          "format": "time",
+          "title": "End",
+          "type": "string"
+        },
+        "weekdays": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Weekdays",
+          "type": "array"
+        },
+        "months": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Months",
+          "type": "array"
+        },
+        "dates": {
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Dates",
+          "type": "array"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "import_rate": {
+          "minimum": 0,
+          "title": "Import Rate",
+          "type": "number"
+        },
+        "export_rate": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Export Rate",
+          "type": "number"
+        },
+        "grid_charge_allowed": {
+          "default": false,
+          "title": "Grid Charge Allowed",
+          "type": "boolean"
+        },
+        "export_allowed": {
+          "default": true,
+          "title": "Export Allowed",
+          "type": "boolean"
+        },
+        "export_kw": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Export Kw"
+        },
+        "import_kw": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Import Kw"
+        },
+        "export_cap_kwh": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Export Cap Kwh"
+        },
+        "reexport_grid_energy": {
+          "default": true,
+          "title": "Reexport Grid Energy",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "import_rate"
+      ],
+      "title": "TariffRule",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "revision": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "name": {
+      "default": "My household",
+      "maxLength": 100,
+      "title": "Name",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "Australia/Adelaide",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "latitude": {
+      "maximum": 90,
+      "minimum": -90,
+      "title": "Latitude",
+      "type": "number"
+    },
+    "longitude": {
+      "maximum": 180,
+      "minimum": -180,
+      "title": "Longitude",
+      "type": "number"
+    },
+    "weather_model": {
+      "default": "best_match",
+      "enum": [
+        "best_match",
+        "ecmwf_ifs",
+        "gfs_global",
+        "bom_access_global"
+      ],
+      "title": "Weather Model",
+      "type": "string"
+    },
+    "banks": {
+      "items": {
+        "$ref": "#/$defs/Bank"
+      },
+      "maxItems": 50,
+      "title": "Banks",
+      "type": "array"
+    },
+    "inverter_limits_kw": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Inverter Limits Kw",
+      "type": "object"
+    },
+    "battery": {
+      "$ref": "#/$defs/Battery"
+    },
+    "mappings": {
+      "items": {
+        "$ref": "#/$defs/Mapping"
+      },
+      "title": "Mappings",
+      "type": "array"
+    },
+    "tariff": {
+      "items": {
+        "$ref": "#/$defs/TariffRule"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Tariff",
+      "type": "array"
+    },
+    "calendars": {
+      "$ref": "#/$defs/Calendars"
+    },
+    "export_limit_kw": {
+      "default": 5,
+      "minimum": 0,
+      "title": "Export Limit Kw",
+      "type": "number"
+    },
+    "import_limit_kw": {
+      "default": 10,
+      "exclusiveMinimum": 0,
+      "title": "Import Limit Kw",
+      "type": "number"
+    },
+    "shared_inverter_kw": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shared Inverter Kw"
+    },
+    "mandatory_phase_limits": {
+      "default": false,
+      "title": "Mandatory Phase Limits",
+      "type": "boolean"
+    },
+    "required_dynamic_limit": {
+      "default": false,
+      "title": "Required Dynamic Limit",
+      "type": "boolean"
+    },
+    "soc_freshness_seconds": {
+      "default": 120,
+      "maximum": 3600,
+      "minimum": 30,
+      "title": "Soc Freshness Seconds",
+      "type": "integer"
+    },
+    "lease_seconds": {
+      "default": 60,
+      "maximum": 120,
+      "minimum": 15,
+      "title": "Lease Seconds",
+      "type": "integer"
+    },
+    "weather_freshness_seconds": {
+      "default": 7200,
+      "maximum": 21600,
+      "minimum": 900,
+      "title": "Weather Freshness Seconds",
+      "type": "integer"
+    },
+    "recent_days": {
+      "default": 14,
+      "maximum": 30,
+      "minimum": 7,
+      "title": "Recent Days",
+      "type": "integer"
+    },
+    "learning_paused": {
+      "default": false,
+      "title": "Learning Paused",
+      "type": "boolean"
+    },
+    "target_confidence": {
+      "default": 0.99,
+      "maximum": 0.999,
+      "minimum": 0.9,
+      "title": "Target Confidence",
+      "type": "number"
+    },
+    "terminal_reserve_kwh": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Terminal Reserve Kwh"
+    },
+    "paid_import_tolerance_kwh": {
+      "default": 0,
+      "maximum": 0.1,
+      "minimum": 0,
+      "title": "Paid Import Tolerance Kwh",
+      "type": "number"
+    },
+    "grid_charge_intent": {
+      "default": false,
+      "title": "Grid Charge Intent",
+      "type": "boolean"
+    },
+    "scenario_count": {
+      "default": 2000,
+      "maximum": 10000,
+      "minimum": 100,
+      "title": "Scenario Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "latitude",
+    "longitude",
+    "tariff"
+  ],
+  "title": "Configuration",
+  "type": "object"
+}

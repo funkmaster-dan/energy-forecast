@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "title": "Feature",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 150,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "epoch": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Epoch",
+          "type": "string"
+        },
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "enum": [
+            "W",
+            "kW",
+            "Wh",
+            "kWh",
+            "%",
+            "\u00b0C",
+            "W/m\u00b2"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "mean_power",
+            "interval_energy",
+            "counter",
+            "state"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "boundary": {
+          "enum": [
+            "AC",
+            "DC",
+            "stored",
+            "environment"
+          ],
+          "title": "Boundary",
+          "type": "string"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "quality": {
+          "$ref": "#/$defs/Quality",
+          "default": "valid"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Reasons",
+          "type": "array"
+        },
+        "coverage": {
+          "default": 1,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Coverage",
+          "type": "number"
+        }
+      },
+      "required": [
+        "feature",
+        "source",
+        "epoch",
+        "start",
+        "end",
+        "value",
+        "unit",
+        "kind",
+        "boundary"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "Quality": {
+      "enum": [
+        "valid",
+        "suspect",
+        "invalid",
+        "imputed"
+      ],
+      "title": "Quality",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "batch_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "maxItems": 5000,
+      "minItems": 1,
+      "title": "Observations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "batch_id",
+    "observations"
+  ],
+  "title": "Batch",
+  "type": "object"
+}

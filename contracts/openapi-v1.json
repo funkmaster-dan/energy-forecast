@@ -1,0 +1,2743 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Energy Forecast",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "summary": "Auth Status",
+        "operationId": "auth_status_auth_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/setup": {
+      "post": {
+        "summary": "Setup",
+        "operationId": "setup_auth_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/configuration": {
+      "get": {
+        "summary": "Get Configuration",
+        "operationId": "get_configuration_v1_sites__site_id__configuration_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Configuration",
+        "operationId": "put_configuration_v1_sites__site_id__configuration_put",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Configuration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/observations": {
+      "post": {
+        "summary": "Ingest",
+        "operationId": "ingest_v1_sites__site_id__observations_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Batch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Raw Observations",
+        "operationId": "raw_observations_v1_sites__site_id__observations_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "feature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/quality": {
+      "get": {
+        "summary": "Quality",
+        "operationId": "quality_v1_sites__site_id__quality_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 90,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/composition": {
+      "get": {
+        "summary": "Composition",
+        "operationId": "composition_v1_sites__site_id__composition_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "feature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "household_load",
+              "title": "Feature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/observations/{observation_id}/review": {
+      "put": {
+        "summary": "Review",
+        "operationId": "review_v1_sites__site_id__observations__observation_id__review_put",
+        "parameters": [
+          {
+            "name": "observation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Observation Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Review"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/forecast/latest": {
+      "get": {
+        "summary": "Latest",
+        "operationId": "latest_v1_sites__site_id__forecast_latest_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/forecasts": {
+      "get": {
+        "summary": "Archives",
+        "operationId": "archives_v1_sites__site_id__forecasts_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/forecasts/{forecast_id}": {
+      "get": {
+        "summary": "Replay",
+        "operationId": "replay_v1_sites__site_id__forecasts__forecast_id__get",
+        "parameters": [
+          {
+            "name": "forecast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Forecast Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/weather/status": {
+      "get": {
+        "summary": "Weather Status",
+        "operationId": "weather_status_v1_sites__site_id__weather_status_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/diagnostics": {
+      "get": {
+        "summary": "Diagnostics",
+        "operationId": "diagnostics_v1_sites__site_id__diagnostics_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/jobs": {
+      "get": {
+        "summary": "Jobs",
+        "operationId": "jobs_v1_sites__site_id__jobs_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Job",
+        "operationId": "create_job_v1_sites__site_id__jobs_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/jobs/{job_id}": {
+      "delete": {
+        "summary": "Cancel",
+        "operationId": "cancel_v1_sites__site_id__jobs__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/models": {
+      "get": {
+        "summary": "Models",
+        "operationId": "models_v1_sites__site_id__models_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/models/{model_id}/activate": {
+      "post": {
+        "summary": "Activate",
+        "operationId": "activate_v1_sites__site_id__models__model_id__activate_post",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/models/rollback": {
+      "post": {
+        "summary": "Rollback",
+        "operationId": "rollback_v1_sites__site_id__models_rollback_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/tokens": {
+      "post": {
+        "summary": "Token",
+        "operationId": "token_v1_sites__site_id__tokens_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Tokens",
+        "operationId": "tokens_v1_sites__site_id__tokens_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/tokens/{token_id}": {
+      "delete": {
+        "summary": "Revoke",
+        "operationId": "revoke_v1_sites__site_id__tokens__token_id__delete",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/tariff/preview": {
+      "get": {
+        "summary": "Tariff Preview",
+        "operationId": "tariff_preview_v1_sites__site_id__tariff_preview_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Day"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/calendars/preview": {
+      "get": {
+        "summary": "Calendar Preview",
+        "operationId": "calendar_preview_v1_sites__site_id__calendars_preview_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Day"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/calendars/import": {
+      "post": {
+        "summary": "Calendar Import",
+        "operationId": "calendar_import_v1_sites__site_id__calendars_import_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarImport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/backup": {
+      "post": {
+        "summary": "Backup",
+        "operationId": "backup_v1_sites__site_id__backup_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/backups/{backup_id}": {
+      "get": {
+        "summary": "Download Backup",
+        "operationId": "download_backup_v1_sites__site_id__backups__backup_id__get",
+        "parameters": [
+          {
+            "name": "backup_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Backup Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bank": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$",
+            "title": "Id"
+          },
+          "dc_kwp": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Dc Kwp"
+          },
+          "tilt": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": 0.0,
+            "title": "Tilt"
+          },
+          "azimuth": {
+            "type": "number",
+            "exclusiveMaximum": 360.0,
+            "minimum": 0.0,
+            "title": "Azimuth"
+          },
+          "inverter_group": {
+            "type": "string",
+            "title": "Inverter Group",
+            "default": "main"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "conversion_efficiency": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Conversion Efficiency",
+            "default": 0.96
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "dc_kwp",
+          "tilt",
+          "azimuth"
+        ],
+        "title": "Bank"
+      },
+      "Batch": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "batch_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Batch Id"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/Observation"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "minItems": 1,
+            "title": "Observations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batch_id",
+          "observations"
+        ],
+        "title": "Batch"
+      },
+      "Battery": {
+        "properties": {
+          "capacity_kwh": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Capacity Kwh",
+            "default": 10
+          },
+          "reserve_kwh": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Reserve Kwh",
+            "default": 2
+          },
+          "upper_kwh": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Upper Kwh",
+            "default": 10
+          },
+          "charge_kw": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Charge Kw",
+            "default": 3
+          },
+          "discharge_kw": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Discharge Kw",
+            "default": 3
+          },
+          "eta_charge": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Eta Charge",
+            "default": 0.95
+          },
+          "eta_discharge": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Eta Discharge",
+            "default": 0.95
+          },
+          "standby_kw": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Standby Kw",
+            "default": 0
+          },
+          "taper_start_pct": {
+            "type": "number",
+            "exclusiveMaximum": 100.0,
+            "minimum": 50.0,
+            "title": "Taper Start Pct",
+            "default": 90
+          },
+          "parameter_source": {
+            "type": "string",
+            "title": "Parameter Source",
+            "default": "configured usable capacity"
+          },
+          "independent_stored_energy": {
+            "type": "boolean",
+            "title": "Independent Stored Energy",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Battery"
+      },
+      "CalendarEvent": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Start Time",
+            "default": "00:00:00"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "time",
+            "title": "End Time",
+            "default": "00:00:00"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "school_holiday",
+              "public_holiday",
+              "household",
+              "pupil_free"
+            ],
+            "title": "Kind"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "government"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "known_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "label",
+          "kind",
+          "source",
+          "version"
+        ],
+        "title": "CalendarEvent"
+      },
+      "CalendarImport": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "csv",
+              "ics"
+            ],
+            "title": "Format"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 500000,
+            "title": "Content"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Source"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Version"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "school_holiday",
+              "public_holiday",
+              "household",
+              "pupil_free"
+            ],
+            "title": "Kind"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "format",
+          "content",
+          "source",
+          "version",
+          "kind"
+        ],
+        "title": "CalendarImport"
+      },
+      "Calendars": {
+        "properties": {
+          "public_jurisdiction": {
+            "type": "string",
+            "enum": [
+              "ACT",
+              "NSW",
+              "NT",
+              "QLD",
+              "SA",
+              "TAS",
+              "VIC",
+              "WA"
+            ],
+            "title": "Public Jurisdiction",
+            "default": "SA"
+          },
+          "school_jurisdiction": {
+            "type": "string",
+            "enum": [
+              "ACT",
+              "NSW",
+              "NT",
+              "QLD",
+              "SA",
+              "TAS",
+              "VIC",
+              "WA"
+            ],
+            "title": "School Jurisdiction",
+            "default": "SA"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "covered_years": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Covered Years"
+          },
+          "school_profiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "School Profiles"
+          },
+          "school_combination": {
+            "type": "string",
+            "enum": [
+              "any",
+              "all"
+            ],
+            "title": "School Combination",
+            "default": "any"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarEvent"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Calendars"
+      },
+      "Configuration": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "default": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Name",
+            "default": "My household"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "Australia/Adelaide"
+          },
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          },
+          "weather_model": {
+            "type": "string",
+            "enum": [
+              "best_match",
+              "ecmwf_ifs",
+              "gfs_global",
+              "bom_access_global"
+            ],
+            "title": "Weather Model",
+            "default": "best_match"
+          },
+          "banks": {
+            "items": {
+              "$ref": "#/components/schemas/Bank"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Banks"
+          },
+          "inverter_limits_kw": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Inverter Limits Kw"
+          },
+          "battery": {
+            "$ref": "#/components/schemas/Battery"
+          },
+          "mappings": {
+            "items": {
+              "$ref": "#/components/schemas/Mapping"
+            },
+            "type": "array",
+            "title": "Mappings"
+          },
+          "tariff": {
+            "items": {
+              "$ref": "#/components/schemas/TariffRule"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Tariff"
+          },
+          "calendars": {
+            "$ref": "#/components/schemas/Calendars"
+          },
+          "export_limit_kw": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Export Limit Kw",
+            "default": 5
+          },
+          "import_limit_kw": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Import Limit Kw",
+            "default": 10
+          },
+          "shared_inverter_kw": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Inverter Kw"
+          },
+          "mandatory_phase_limits": {
+            "type": "boolean",
+            "title": "Mandatory Phase Limits",
+            "default": false
+          },
+          "required_dynamic_limit": {
+            "type": "boolean",
+            "title": "Required Dynamic Limit",
+            "default": false
+          },
+          "soc_freshness_seconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 30.0,
+            "title": "Soc Freshness Seconds",
+            "default": 120
+          },
+          "lease_seconds": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 15.0,
+            "title": "Lease Seconds",
+            "default": 60
+          },
+          "weather_freshness_seconds": {
+            "type": "integer",
+            "maximum": 21600.0,
+            "minimum": 900.0,
+            "title": "Weather Freshness Seconds",
+            "default": 7200
+          },
+          "recent_days": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 7.0,
+            "title": "Recent Days",
+            "default": 14
+          },
+          "learning_paused": {
+            "type": "boolean",
+            "title": "Learning Paused",
+            "default": false
+          },
+          "target_confidence": {
+            "type": "number",
+            "maximum": 0.999,
+            "minimum": 0.9,
+            "title": "Target Confidence",
+            "default": 0.99
+          },
+          "terminal_reserve_kwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Reserve Kwh"
+          },
+          "paid_import_tolerance_kwh": {
+            "type": "number",
+            "maximum": 0.1,
+            "minimum": 0.0,
+            "title": "Paid Import Tolerance Kwh",
+            "default": 0
+          },
+          "grid_charge_intent": {
+            "type": "boolean",
+            "title": "Grid Charge Intent",
+            "default": false
+          },
+          "scenario_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 100.0,
+            "title": "Scenario Count",
+            "default": 2000
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "tariff"
+        ],
+        "title": "Configuration"
+      },
+      "Credentials": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password"
+          },
+          "setup_key": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Setup Key",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "Credentials"
+      },
+      "ExportPlan": {
+        "properties": {
+          "safe_battery_export_remaining_kwh": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Safe Battery Export Remaining Kwh",
+            "default": 0
+          },
+          "safe_battery_export_now_kwh": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Safe Battery Export Now Kwh",
+            "default": 0
+          },
+          "advisory_export_power_kw": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Advisory Export Power Kw",
+            "default": 0
+          },
+          "target_path_confidence": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Target Path Confidence",
+            "default": 0.99
+          },
+          "estimated_path_confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Path Confidence"
+          },
+          "required_reserve_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Reserve Kwh"
+          },
+          "required_reserve_soc_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Reserve Soc Pct"
+          },
+          "source_soc_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Soc At"
+          },
+          "source_soc_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Soc Pct"
+          },
+          "replacement_budget": {
+            "type": "boolean",
+            "const": true,
+            "title": "Replacement Budget",
+            "default": true
+          },
+          "conditional_on_free_charge": {
+            "type": "boolean",
+            "title": "Conditional On Free Charge",
+            "default": false
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Schedule"
+          },
+          "shadow_candidate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadow Candidate"
+          },
+          "stress_failed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stress Failed"
+          },
+          "conditional_free_charge": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditional Free Charge"
+          },
+          "scenario_diagnostics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Diagnostics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExportPlan"
+      },
+      "ForecastResponse": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "forecast_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "warming_up",
+              "shadow",
+              "ready",
+              "degraded",
+              "stale",
+              "invalid_configuration",
+              "baseline_infeasible",
+              "horizon_insufficient"
+            ],
+            "title": "Status"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "configuration_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Hash"
+          },
+          "configuration_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Revision"
+          },
+          "weather_vintage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Vintage"
+          },
+          "input_watermark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Watermark"
+          },
+          "model_versions": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Model Versions"
+          },
+          "resolution_minutes": {
+            "type": "integer",
+            "title": "Resolution Minutes",
+            "default": 60
+          },
+          "horizon_hours": {
+            "type": "integer",
+            "title": "Horizon Hours",
+            "default": 48
+          },
+          "units": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Units"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "series": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "totals": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Totals"
+          },
+          "export_plan": {
+            "$ref": "#/components/schemas/ExportPlan"
+          },
+          "history_intervals": {
+            "type": "integer",
+            "title": "History Intervals",
+            "default": 0
+          },
+          "historical_replay": {
+            "type": "boolean",
+            "title": "Historical Replay",
+            "default": false
+          },
+          "observed_series": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Observed Series"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "export_plan"
+        ],
+        "title": "ForecastResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "weather",
+              "forecast",
+              "train",
+              "calibrate",
+              "weather_history",
+              "weather_run",
+              "export_history",
+              "bias",
+              "adapt"
+            ],
+            "title": "Kind"
+          },
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "JobRequest"
+      },
+      "Mapping": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "stitch",
+              "fallback",
+              "sum",
+              "derived"
+            ],
+            "title": "Mode",
+            "default": "stitch"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Sources"
+          },
+          "min_coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Coverage",
+            "default": 0.9
+          },
+          "maximum_kw": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Maximum Kw",
+            "default": 50
+          },
+          "resolution_minutes": {
+            "type": "integer",
+            "enum": [
+              5,
+              15,
+              60
+            ],
+            "title": "Resolution Minutes",
+            "default": 60
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "feature",
+          "sources"
+        ],
+        "title": "Mapping"
+      },
+      "Observation": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Feature"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "epoch": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Epoch"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "W",
+              "kW",
+              "Wh",
+              "kWh",
+              "%",
+              "\u00b0C",
+              "W/m\u00b2"
+            ],
+            "title": "Unit"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mean_power",
+              "interval_energy",
+              "counter",
+              "state"
+            ],
+            "title": "Kind"
+          },
+          "boundary": {
+            "type": "string",
+            "enum": [
+              "AC",
+              "DC",
+              "stored",
+              "environment"
+            ],
+            "title": "Boundary"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "default": 0
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality",
+            "default": "valid"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Reasons"
+          },
+          "coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "feature",
+          "source",
+          "epoch",
+          "start",
+          "end",
+          "value",
+          "unit",
+          "kind",
+          "boundary"
+        ],
+        "title": "Observation"
+      },
+      "Quality": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "suspect",
+          "invalid",
+          "imputed"
+        ],
+        "title": "Quality"
+      },
+      "Review": {
+        "properties": {
+          "quality": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "suspect",
+              "invalid"
+            ],
+            "title": "Quality"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "quality",
+          "reason"
+        ],
+        "title": "Review"
+      },
+      "Source": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "scale": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Scale",
+            "default": 1
+          },
+          "sign": {
+            "type": "integer",
+            "enum": [
+              -1,
+              1
+            ],
+            "title": "Sign",
+            "default": 1
+          },
+          "dc_to_ac_efficiency": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Dc To Ac Efficiency",
+            "default": 0.96
+          },
+          "coefficient": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Coefficient",
+            "default": 1
+          },
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "Source"
+      },
+      "TariffRule": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start": {
+            "type": "string",
+            "format": "time",
+            "title": "Start",
+            "default": "00:00:00"
+          },
+          "end": {
+            "type": "string",
+            "format": "time",
+            "title": "End",
+            "default": "00:00:00"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Weekdays"
+          },
+          "months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Months"
+          },
+          "dates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Dates"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "import_rate": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Import Rate"
+          },
+          "export_rate": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Export Rate",
+            "default": 0
+          },
+          "grid_charge_allowed": {
+            "type": "boolean",
+            "title": "Grid Charge Allowed",
+            "default": false
+          },
+          "export_allowed": {
+            "type": "boolean",
+            "title": "Export Allowed",
+            "default": true
+          },
+          "export_kw": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Kw"
+          },
+          "import_kw": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Import Kw"
+          },
+          "export_cap_kwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Cap Kwh"
+          },
+          "reexport_grid_energy": {
+            "type": "boolean",
+            "title": "Reexport Grid Energy",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "import_rate"
+        ],
+        "title": "TariffRule"
+      },
+      "TokenRequest": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "integration",
+              "viewer",
+              "admin"
+            ],
+            "title": "Scope",
+            "default": "integration"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TokenRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

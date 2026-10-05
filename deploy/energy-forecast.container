@@ -1,0 +1,21 @@
+[Unit]
+Description=Energy Forecast advisory service
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/energy-forecast:0.1.0
+ContainerName=energy-forecast
+PublishPort=127.0.0.1:18080:8080
+Volume=energy-forecast-data.volume:/data
+Environment=ENERGY_DATA_DIR=/data
+Environment=ENERGY_PUBLIC_ORIGIN=http://127.0.0.1:18080
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=120
+MemoryMax=8G
+CPUQuota=400%
+
+[Install]
+WantedBy=default.target

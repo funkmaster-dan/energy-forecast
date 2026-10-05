@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "forecast_id": "synthetic-contract-1",
+  "status": "shadow",
+  "issued_at": "2026-10-05T00:00:00Z",
+  "valid_until": "2026-10-05T00:01:00Z",
+  "configuration_hash": "synthetic-only",
+  "configuration_revision": 1,
+  "weather_vintage": null,
+  "input_watermark": null,
+  "model_versions": {
+    "pv": "physical-v1",
+    "load": "weekday-profile-v1",
+    "uncertainty": null
+  },
+  "resolution_minutes": 60,
+  "horizon_hours": 48,
+  "units": {},
+  "assumptions": [],
+  "series": [],
+  "totals": {
+    "pv_24h_kwh": 10.0,
+    "pv_48h_kwh": 20.0,
+    "load_24h_kwh": 8.0,
+    "load_48h_kwh": 16.0
+  },
+  "export_plan": {
+    "safe_battery_export_remaining_kwh": 0.0,
+    "safe_battery_export_now_kwh": 0.0,
+    "advisory_export_power_kw": 0.0,
+    "target_path_confidence": 0.99,
+    "estimated_path_confidence": null,
+    "required_reserve_kwh": 2.0,
+    "required_reserve_soc_pct": 20.0,
+    "source_soc_at": "2026-10-04T23:59:50Z",
+    "source_soc_pct": 80.0,
+    "replacement_budget": true,
+    "conditional_on_free_charge": false,
+    "reason_codes": [
+      "insufficient_tail_validation"
+    ],
+    "schedule": [],
+    "shadow_candidate": null,
+    "stress_failed": null,
+    "conditional_free_charge": null,
+    "scenario_diagnostics": null
+  },
+  "history_intervals": 0,
+  "historical_replay": false,
+  "observed_series": []
+}

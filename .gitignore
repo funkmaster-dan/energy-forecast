@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.env*
+!.env.dev.example
+/data/
+/local/
+*.sqlite*
+*.parquet
+*.pt
+*.npz
+web/node_modules/
+web/dist/
