@@ -5,7 +5,7 @@ This is a working forecasting/data collection and shadow-planning release. The b
 | Milestone | Delivered | Remaining exit conditions |
 |---|---|---|
 | M0 | Two public repositories, MIT, independent main branches, contributor guides, Python/npm lockfiles | None for bootstrap |
-| M1 | Authenticated API/GUI, raw/revision/batch journal, setup key, scoped tokens, durable jobs, non-root image, persistence/backup | Household commissioning; Docker Engine smoke is unrun |
+| M1 | Authenticated API/GUI, raw/revision/batch journal, setup key, scoped tokens, durable jobs, non-root image, persistence/backup | Household commissioning; Docker runtime smoke passed in Debian LXC; live input verification remains |
 | M2 | HACS pairing/options/discovery, selected live input forwarding, hourly/5-minute/raw Recorder paging, retry checkpoints, composition/alignment, coverage/review UI | Live household PV/boundary/transition audit; richer contextual/stalling/cross-meter fault rules and overlap correction need measured data |
 | M3 | Direct archived live weather, run/reanalysis import jobs, pvlib POA, jurisdiction/profile imports, coverage/partial-day/ICS handling | Actual archive coverage and all regional school datasets need commissioning; no automatic education-site scrapers |
 | M4 | Fixed TOU priority/date/month/weekday rules, exact boundaries/DST, conservative origin/caps/efficiency/taper battery simulation, passive-fit gate | Passive measured parameter identification; tariff-specific tiered rates and per-phase validation are not implemented |
@@ -20,7 +20,7 @@ This is a working forecasting/data collection and shadow-planning release. The b
 - Focused service pytest and Ruff; integration protocol/retry pytest and Ruff.
 - TypeScript/Vite build and frontend lint; Playwright desktop/mobile checks with screenshot inspection.
 - Isolated HA Core 2026.9.4: config flow, setup of ten entities, selected-input forwarding, cached readiness local expiry, options reload and unload.
-- Rootless Podman image, real Open-Meteo receipt, rolling 48-hour baseline/quarter-hour simulation, asynchronous synthetic CNN candidate, failed-gate retention, health/persistence/replacement and clean-volume restore.
+- Rootless Podman image and Docker/Compose LXC startup, real Open-Meteo receipt, rolling 48-hour baseline/quarter-hour simulation, asynchronous synthetic CNN candidate, failed-gate retention, health/persistence/replacement and clean-volume restore.
 - Public contents include only code, generalized documentation and synthetic contracts/fixtures. Credentials, actual household observations, local setup keys, backups, HA runtime and model artifacts stay outside Git.
 
 Neither API nor integration has a device actuation path. A model finishing training and a feasible shadow simulation both remain distinct from export readiness. Current export remaining/now/power values are zero whenever readiness is unvalidated.

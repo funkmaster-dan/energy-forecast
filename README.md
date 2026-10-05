@@ -27,7 +27,7 @@ docker compose exec energy-forecast cat /data/setup-key
 docker compose logs -f
 ```
 
-Docker Engine is not installed on the development workstation, so these Docker commands remain unverified. The same Dockerfile and Compose manifest have been exercised with rootless Podman. See [operations](docs/operations.md) for ownership, TLS, Quadlet, upgrades and backup/restore.
+Docker Engine is not installed on the development workstation. The image has been built with rootless Podman, loaded into Docker 29.7.2, and run with Docker Compose 5.5.0 in a Debian LXC. Docker startup, non-root operation, outbound weather, authentication and restart persistence passed there. An in-Docker image build remains unrun. See [operations](docs/operations.md) for ownership, TLS, Quadlet, upgrades and backup/restore.
 
 ## Configure and pair HA
 
