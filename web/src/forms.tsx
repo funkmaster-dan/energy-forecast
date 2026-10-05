@@ -474,11 +474,38 @@ export function MappingForm({
                   value={source.source || ""}
                   onChange={(e) => update("source", e.target.value)}
                 >
-                  {sources.map((s) => (
-                    <MenuItem value={s.source} key={s.source}>
-                      {s.name} · {s.unit} {s.inactive ? "(history)" : ""}
-                    </MenuItem>
-                  ))}
+                  {sources
+                    .filter((s) => {
+                      const feature = String(r.feature || "");
+                      if (feature === "battery_soc")
+                        return (
+                          s.unit === "%" &&
+                          (!s.contexts || s.contexts.includes("battery_soc"))
+                        );
+                      if (
+                        feature === "household_load" ||
+                        feature.startsWith("pv_")
+                      ) {
+                        if (!["W", "kW", "Wh", "kWh"].includes(s.unit))
+                          return false;
+                        const context =
+                          feature === "household_load"
+                            ? "household_load"
+                            : "pv_generation";
+                        return (
+                          r.mode === "derived" ||
+                          !s.contexts ||
+                          s.contexts.includes(context)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((s) => (
+                      <MenuItem value={s.source} key={s.source}>
+                        {s.name} · {s.unit} · {s.source}{" "}
+                        {s.inactive ? "(history)" : ""}
+                      </MenuItem>
+                    ))}
                 </TextField>
                 <NumberField
                   label="Priority"
