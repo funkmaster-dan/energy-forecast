@@ -1,0 +1,24 @@
+services:
+  energy-forecast:
+    image: ${ENERGY_IMAGE:-localhost/energy-forecast:0.1.0-alpha.2}
+    container_name: energy-forecast
+    pull_policy: never
+    ports:
+      - "${ENERGY_BIND_ADDRESS:-0.0.0.0}:${ENERGY_HOST_PORT:-18080}:8080"
+    environment:
+      ENERGY_DATA_DIR: /data
+      ENERGY_PUBLIC_ORIGIN: ${ENERGY_PUBLIC_ORIGIN:?Set the reachable LXC service origin}
+      ENERGY_COOKIE_SECURE: "${ENERGY_COOKIE_SECURE:-false}"
+    volumes:
+      - energy-forecast-data:/data
+    restart: unless-stopped
+    mem_limit: ${ENERGY_MEMORY_LIMIT:-2g}
+    cpus: ${ENERGY_CPU_LIMIT:-2}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  energy-forecast-data:
+    name: energy-forecast-data

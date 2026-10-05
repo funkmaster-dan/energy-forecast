@@ -16,12 +16,22 @@ from .tariff import boundaries, resolve
 from .weather import physical_pv
 
 
-def canonical(store, config, feature):
+def canonical(store, config, feature, training_cutoff=None):
     mapping = next((m for m in config.mappings if m.feature == feature), None)
     if mapping is None:
         return []
     # Derived profiles may consume several logical features, but only named sources.
-    records = store.observations(None if mapping.mode == "derived" else feature)
+    options = {}
+    if training_cutoff:
+        options = {
+            "limit": None,
+            "as_of": training_cutoff,
+            "after": training_cutoff - timedelta(days=730),
+            "minimum_seconds": 300,
+            "recent_raw_after": training_cutoff - timedelta(days=2),
+            "sources": [s.source for s in mapping.sources],
+        }
+    records = store.observations(None if mapping.mode == "derived" else feature, **options)
     return compose(records, mapping)
 
 

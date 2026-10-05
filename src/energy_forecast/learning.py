@@ -39,7 +39,7 @@ def time_features(times, zone):
 def hourly_targets(store, config, feature, cutoff=None):
     cutoff = cutoff or now()
     result = {}
-    for row in canonical(store, config, feature):
+    for row in canonical(store, config, feature, training_cutoff=cutoff):
         start, end = dt(row["start"]), dt(row["end"])
         if (
             start.minute == 0

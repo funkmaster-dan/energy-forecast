@@ -179,7 +179,17 @@ class Store:
                 )
         return {"accepted": count, "duplicate": False}
 
-    def observations(self, feature=None, limit=100000, before=None):
+    def observations(
+        self,
+        feature=None,
+        limit=100000,
+        before=None,
+        after=None,
+        as_of=None,
+        minimum_seconds=0,
+        recent_raw_after=None,
+        sources=None,
+    ):
         conditions, args = [], []
         if feature:
             conditions.append("o.feature=?")
@@ -187,10 +197,28 @@ class Store:
         if before:
             conditions.append("o.end<=?")
             args.append(before.isoformat())
-        conditions.append(
-            "o.revision=(SELECT MAX(x.revision) FROM observations x WHERE x.source=o.source AND x.epoch=o.epoch AND x.feature=o.feature AND x.start=o.start AND x.end=o.end)"
-        )
-        args.append(limit)
+        if after:
+            conditions.append("julianday(o.end)>julianday(?)")
+            args.append(after.isoformat())
+        if sources:
+            conditions.append("o.source IN (" + ",".join("?" for _ in sources) + ")")
+            args.extend(sources)
+        if minimum_seconds:
+            duration = "(julianday(o.end)-julianday(o.start))*86400>=?"
+            args.append(minimum_seconds - 0.01)
+            if recent_raw_after:
+                duration = "(" + duration + " OR julianday(o.start)>=julianday(?))"
+                args.append(recent_raw_after.isoformat())
+            conditions.append(duration)
+        if as_of:
+            conditions.append("o.received<=?")
+            args.append(as_of.isoformat())
+        latest = "o.revision=(SELECT MAX(x.revision) FROM observations x WHERE x.source=o.source AND x.epoch=o.epoch AND x.feature=o.feature AND x.start=o.start AND x.end=o.end"
+        if as_of:
+            latest += " AND x.received<=?"
+            args.append(as_of.isoformat())
+        conditions.append(latest + ")")
+        args.append(-1 if limit is None else limit)
         with self.connect() as db:
             rows = db.execute(
                 "SELECT o.* FROM observations o WHERE "
@@ -200,7 +228,12 @@ class Store:
             ).fetchall()
             reviews = {
                 r["observation_id"]: r
-                for r in db.execute("SELECT * FROM quality_reviews ORDER BY id").fetchall()
+                for r in db.execute(
+                    "SELECT * FROM quality_reviews"
+                    + (" WHERE created<=?" if as_of else "")
+                    + " ORDER BY id",
+                    (as_of.isoformat(),) if as_of else (),
+                ).fetchall()
             }
         result = []
         for row in reversed(rows):

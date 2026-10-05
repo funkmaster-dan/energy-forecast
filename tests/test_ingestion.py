@@ -212,3 +212,48 @@ def test_hourly_energy_cannot_be_ground_truth_for_fifteen_minute_peaks(store):
         ),
     )
     assert all(row["energy_kwh"] is None for row in rows)
+
+
+def test_revision_and_reviews_are_frozen_at_training_watermark(store):
+    from datetime import datetime, timezone
+
+    from energy_forecast.store import stamp
+
+    original = observation(1000)
+    ingest(store, original)
+    cutoff = datetime.now(timezone.utc)
+    ingest(
+        store, original.model_copy(update={"value": 5000, "revision": 1}), batch_id="late-revision"
+    )
+    old = store.observations(as_of=cutoff)[0]
+    with store.connect() as db:
+        db.execute(
+            "INSERT INTO quality_reviews(observation_id,quality,reason,created) VALUES (?,?,?,?)",
+            (old["id"], "invalid", "Later review", stamp()),
+        )
+    assert store.observations(as_of=cutoff)[0]["value"] == 1000
+    assert store.observations(as_of=cutoff)[0]["quality"] == "valid"
+    assert store.observations()[0]["value"] == 5000
+
+
+def test_training_read_keeps_hourly_history_without_loading_all_raw_minutes(store):
+    from datetime import datetime, timezone
+
+    base = observation(1000)
+    records = [base]
+    for i in range(10):
+        records.append(
+            base.model_copy(
+                update={
+                    "start": base.end + timedelta(minutes=i),
+                    "end": base.end + timedelta(minutes=i + 1),
+                    "value": 2000,
+                }
+            )
+        )
+    ingest(store, *records)
+    assert len(store.observations(limit=2)) == 2
+    assert (
+        len(store.observations(limit=None, minimum_seconds=300, as_of=datetime.now(timezone.utc)))
+        == 1
+    )
