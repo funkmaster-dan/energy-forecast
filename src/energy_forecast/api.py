@@ -69,15 +69,21 @@ def create_app(directory=None, start_worker=True):
     worker = Worker(store)
     failures = defaultdict(deque)
 
+    from .ha_client import HAPoller
+
+    ha_reader = HAPoller(store)
+
     @asynccontextmanager
     async def lifespan(app):
         if start_worker:
             worker.start()
+            ha_reader.start()
         yield
         if start_worker:
+            ha_reader.shutdown()
             worker.shutdown()
 
-    app = FastAPI(title="Energy Forecast", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Energy Forecast", version="0.3.0", lifespan=lifespan)
     app.state.store = store
 
     @app.middleware("http")
@@ -116,7 +122,7 @@ def create_app(directory=None, start_worker=True):
     def ready():
         with store.connect() as db:
             db.execute("SELECT 1")
-        return {"status": "ok", "export_readiness": "separate", "version": "0.2.0"}
+        return {"status": "ok", "export_readiness": "separate", "version": "0.3.0"}
 
     @app.get("/auth/status")
     def auth_status(request: Request):
@@ -198,36 +204,118 @@ def create_app(directory=None, start_worker=True):
 
     @router.post("/home-assistant/connect", dependencies=[Depends(admin)])
     def connect_home_assistant(payload: ConnectionRequest, request: Request):
-        import httpx
-
         from .home_assistant import connect
 
-        token = security.mint(store, "integration")
-        origin = os.environ.get("ENERGY_PUBLIC_ORIGIN") or str(request.base_url).rstrip("/")
         try:
-            result = connect(store, payload, origin, token)
-            result["integration_token"] = token if result["pairing"] != "paired" else None
-            return result
-        except (ValueError, httpx.HTTPError, KeyError) as error:
-            with store.connect() as db:
-                db.execute(
-                    "UPDATE tokens SET revoked=1 WHERE hash=?", (security.token_hash(token),)
-                )
+            return connect(store, payload)
+        except Exception as error:
             raise HTTPException(
-                422, "Home Assistant connection failed. Check its URL, token and reachability."
+                422, "Home Assistant connection failed. Check its URL, token and API permissions."
             ) from error
 
     @router.get("/home-assistant", dependencies=[Depends(admin)])
     def home_assistant_status():
-        return store.meta("ha_bridge")
+        return {
+            **(store.meta("ha_bridge") or {}),
+            "ingestion": store.meta("ha_ingestion"),
+            "history": store.meta("ha_history"),
+            "history_days": store.meta("ha_history_days") or 730,
+        }
+
+    @router.post("/home-assistant/history", dependencies=[Depends(admin)])
+    def history_options(payload: dict):
+        if set(payload) != {"days"} or payload["days"] not in (90, 365, 730):
+            raise HTTPException(422, "Choose 90, 365 or 730 days")
+        store.meta("ha_history_days", payload["days"])
+        store.meta("ha_history_older", {})
+        return {"days": payload["days"]}
+
+    @router.post("/home-assistant/refresh-sensors", dependencies=[Depends(admin)])
+    def refresh_ha_catalog():
+        from .ha_client import client_for
+        from .home_assistant import ConnectionRequest, connect
+
+        client = client_for(store)
+        if not client:
+            raise HTTPException(409, "Connect Home Assistant first")
+        return connect(store, ConnectionRequest(url=client.url, access_token=client.token))
+
+    @router.post("/models/pv/rollback", dependencies=[Depends(admin)])
+    def rollback_bank_models():
+        from .solar_calibration import geometry_signature
+
+        previous = store.meta("previous_pv_bank_calibration") or {}
+        config = Configuration.model_validate(store.configuration())
+        if any(
+            previous.get("banks", {}).get(b.id, {}).get("geometry_signature")
+            != geometry_signature(config, b)
+            or b.id not in previous.get("scales", {})
+            for b in config.banks
+        ):
+            raise HTTPException(409, "No previous compatible bank fit")
+        store.meta("previous_pv_bank_calibration", store.meta("pv_bank_calibration") or {})
+        store.meta("pv_bank_calibration", previous)
+        store.meta("invalidated_at", stamp())
+        enqueue(store, "forecast")
+        return {"ok": True}
+
+    @router.post("/calendar/import-official", dependencies=[Depends(admin)])
+    def import_official_calendar():
+        from .school_calendar import SOURCE, TERMS, events
+
+        payload = store.configuration()
+        if not payload:
+            raise HTTPException(409, "Configure a site first")
+        if payload["calendars"]["school_jurisdiction"] != "SA":
+            raise HTTPException(422, "Use the calendar file importer for your jurisdiction")
+        payload["calendars"]["events"] = [
+            e for e in payload["calendars"]["events"] if e["source"] != SOURCE
+        ] + events()
+        payload["calendars"]["covered_years"] = sorted(
+            set(payload["calendars"]["covered_years"]) | set(TERMS)
+        )
+        payload["calendars"]["enabled"] = True
+        return store.save_configuration(Configuration.model_validate(payload))
+
+    @router.post("/home-assistant/import-tariff", dependencies=[Depends(admin)])
+    def import_ha_tariff():
+        from .ha_client import client_for, tariff_from_states
+
+        client = client_for(store)
+        if not client:
+            raise HTTPException(409, "Connect Home Assistant first")
+        try:
+            result = tariff_from_states(client.get("states"))
+            config = Configuration.model_validate(
+                {**store.configuration(), "tariff": result["rules"]}
+            )
+            saved = store.save_configuration(config)
+            store.meta("tariff_import", result)
+            enqueue(store, "forecast")
+            return {"configuration": saved, "provenance": result}
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
 
     @router.post("/bridge/metadata", dependencies=[Depends(ingest_auth)])
     def bridge_metadata(payload: BridgeMetadata):
-
+        if (store.root / "home-assistant-connection.json").exists():
+            store.meta(
+                "ha_output_bridge",
+                {"paired": True, "connected_at": stamp(), "ha_version": payload.ha_version},
+            )
+            return {"ok": True}
         metadata = payload.model_dump(mode="json")
         previous = store.meta("ha_bridge") or {}
         store.meta(
-            "ha_bridge", {**previous, **metadata, "connected_at": stamp(), "pairing": "paired"}
+            "ha_bridge",
+            {
+                **previous,
+                **metadata,
+                "connected_at": stamp(),
+                "pairing": "direct_api"
+                if (store.root / "home-assistant-connection.json").exists()
+                else "paired",
+            },
         )
         return {"ok": True}
 
@@ -426,7 +514,7 @@ def create_app(directory=None, start_worker=True):
             }
         forecast = leased(store, store.latest("forecasts"))
         return {
-            "version": "0.2.0",
+            "version": "0.3.0",
             "schema_version": 1,
             "observations": count,
             "last_ingestion": newest,
@@ -435,6 +523,14 @@ def create_app(directory=None, start_worker=True):
             "jobs": job_counts,
             "battery_calibration": store.meta("battery_calibration"),
             "pv_bank_calibration": store.meta("pv_bank_calibration"),
+            "pv_ac_calibration": store.meta("pv_ac_calibration"),
+            "ha_ingestion": store.meta("ha_ingestion"),
+            "ha_history_older": store.meta("ha_history_older"),
+            "data_access": "direct_api"
+            if (store.root / "home-assistant-connection.json").exists()
+            else "bridge",
+            "ha_history": store.meta("ha_history"),
+            "tariff_import": store.meta("tariff_import"),
             "calibration": store.meta("calibration") or {"status": "insufficient_data"},
             "active_model": store.meta("active_model"),
             "learning_paused": (store.configuration() or {}).get("learning_paused", False),
@@ -605,7 +701,7 @@ def create_app(directory=None, start_worker=True):
         store.backup(database)
         with tarfile.open(target, "w:gz") as archive:
             archive.add(database, arcname="energy.sqlite")
-            for name in ("models", "history"):
+            for name in ("models", "history", "home-assistant-connection.json"):
                 path = store.root / name
                 if path.exists():
                     archive.add(path, arcname=name)

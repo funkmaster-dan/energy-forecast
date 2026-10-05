@@ -89,7 +89,11 @@ export type Forecast = {
     quality_flags: string[];
   }[];
   series?: Series[];
-  totals?: { pv_48h_kwh: number | null; load_48h_kwh: number | null };
+  totals?: {
+    pv_48h_kwh: number | null;
+    pv_bank_48h_kwh?: number | null;
+    load_48h_kwh: number | null;
+  };
   export_plan: {
     safe_battery_export_remaining_kwh: number;
     advisory_export_power_kw: number;

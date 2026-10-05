@@ -132,3 +132,15 @@ def test_free_grid_charging_shares_headroom_with_pv_and_inverter(config):
     assert result["series"][0]["grid_import_kw"] == 2
     assert result["series"][0]["grid_export_kw"] == 0
     assert result["terminal_kwh"][0] == pytest.approx(2 + 3 * config.battery.eta_charge)
+
+
+def test_night_export_can_share_battery_discharge_with_household_load(config):
+    result = simulate(config, [interval(config)], [0], [1], 8, export_kw=1)
+    assert result["battery_export_kwh"][0] == pytest.approx(1)
+    assert result["series"][0]["discharge_kw"] == pytest.approx(2)
+    assert result["paid_import_kwh"][0] == 0
+    assert not result["failed"][0]
+    # Household demand consumes the shared power/energy headroom first.
+    config.battery.discharge_kw = 1
+    result = simulate(config, [interval(config)], [0], [1], 8, export_kw=1)
+    assert result["battery_export_kwh"][0] == 0

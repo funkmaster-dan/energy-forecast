@@ -42,10 +42,26 @@ def estimate_efficiency(intervals, independent_stored_energy=False, seed=42):
             results[direction] = {"status": "insufficient_data", "count": len(values)}
             continue
         values = np.array(values)
-        bootstrap = np.median(rng.choice(values, (1000, len(values))), axis=1)
+        split = int(len(values) * 0.6)
+        calibration_end = int(len(values) * 0.8)
+        fitting, calibration, held_out = (
+            values[:split],
+            values[split:calibration_end],
+            values[calibration_end:],
+        )
+        estimate = float(np.median(fitting))
+        test_mae = float(np.mean(np.abs(held_out - estimate)))
+        bootstrap = np.median(rng.choice(fitting, (1000, len(fitting))), axis=1)
         results[direction] = {
-            "status": "candidate",
-            "estimate": float(np.median(values)),
+            "status": "candidate" if test_mae <= 0.05 else "rejected_holdout",
+            "estimate": estimate,
+            "split_counts": {
+                "train": len(fitting),
+                "calibration": len(calibration),
+                "test": len(held_out),
+            },
+            "test_mae_efficiency": test_mae,
+            "holdout_accepted": test_mae <= 0.05,
             "confidence_95": np.quantile(bootstrap, [0.025, 0.975]).tolist(),
             "count": len(values),
             "limitation": "Bootstrap assumes independent fitting intervals; validate sensor errors separately",
@@ -75,7 +91,7 @@ def calibrate_battery(store, config):
         if r["source"] in {s.source for s in mapping.sources}
         and r["quality"] == "valid"
         and r["boundary"] == "stored"
-        and r["unit"] == "kWh"
+        and r["unit"] in ("Wh", "kWh")
         and r["kind"] == "state"
         and r["value"] is not None
     ]
@@ -101,8 +117,8 @@ def calibrate_battery(store, config):
             {
                 "quality": "valid" if c["quality"] == d["quality"] == "valid" else "suspect",
                 "coverage": 1,
-                "stored_start_kwh": a["value"],
-                "stored_end_kwh": b["value"],
+                "stored_start_kwh": a["value"] / (1000 if a["unit"] == "Wh" else 1),
+                "stored_end_kwh": b["value"] / (1000 if b["unit"] == "Wh" else 1),
                 "charge_ac_kwh": c["energy_kwh"],
                 "discharge_ac_kwh": d["energy_kwh"],
                 "standby_kwh": config.battery.standby_kw * (last - first).total_seconds() / 3600,

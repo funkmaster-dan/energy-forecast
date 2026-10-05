@@ -287,12 +287,14 @@ def train(store, config, job):
         "learning_paused", True
     ):
         activate_model(store, identifier)
+    from .schedule_learning import train_candidate as train_schedule
     from .weather_learning import train_candidate
 
     return {
         "status": "trained",
         "model": bundle,
         "weather_candidate": train_candidate(store, config, job, targets),
+        "schedule_candidate": train_schedule(store, config, job, samples, bundle),
         "pv": train_pv(store, config, cutoff),
     }
 
@@ -352,6 +354,12 @@ def predict_load(store, config, times, baseline, issue, weather=None, weather_ro
         return baseline, None, None, None
     dimensions = bundle.get("future_dimensions", 6)
     future = time_features(times, config.timezone)
+    if dimensions == 11:
+        from .schedule_learning import future_features
+
+        if bundle.get("calendar_signature") != digest(config.calendars.model_dump(mode="json")):
+            return baseline, None, None, None
+        future = future_features(config, times, issue)
     if dimensions == 8:
         if (
             not weather
@@ -530,14 +538,19 @@ def calibrate(store, config):
     load = hourly_targets(store, config, "household_load")
     pv = hourly_targets(store, config, "pv_generation")
     latest = store.latest("forecasts")
-    signature = digest(latest["model_versions"]) if latest else None
+    signature = (
+        (latest["model_versions"].get("validation_cohort") or digest(latest["model_versions"]))
+        if latest
+        else None
+    )
     blocks, selected, last_end = [], [], None
     for forecast in store.origins(
         step_hours=48, config_hash=digest(config.model_dump(mode="json"))
     ):
-        if digest(forecast["model_versions"]) != signature or forecast[
-            "configuration_hash"
-        ] != digest(config.model_dump(mode="json")):
+        if (
+            forecast["model_versions"].get("validation_cohort")
+            or digest(forecast["model_versions"])
+        ) != signature or forecast["configuration_hash"] != digest(config.model_dump(mode="json")):
             continue
         if dt(forecast["issued_at"]) + timedelta(hours=48) > now():
             continue

@@ -78,9 +78,7 @@ def simulate(config, intervals, pv, load, initial_kwh, export_kw=0.0, conditiona
             grid_charge = np.minimum(grid_charge, np.maximum(0, import_limit - import_power))
             grid_charge = np.where((discharge <= 1e-9) & (surplus - charge <= 1e-9), grid_charge, 0)
         base_export = np.minimum(np.maximum(0, surplus - charge), export_headroom)
-        can_export = (
-            (deficit <= 1e-9) & (charge <= 1e-9) & (grid_charge <= 1e-9) & (import_power <= 1e-9)
-        )
+        can_export = (charge <= 1e-9) & (grid_charge <= 1e-9) & (import_power <= 1e-9)
         target = export_kw if tariff["export_allowed"] and tariff["export_rate"] > 0 else 0.0
         discretionary = np.minimum(
             target,

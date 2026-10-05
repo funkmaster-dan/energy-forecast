@@ -1,8 +1,5 @@
-"""Read-only HA onboarding; the supplied token is used once and never persisted."""
+"""Home Assistant onboarding metadata; credentials stay in a private installation file."""
 
-from urllib.parse import urlparse
-
-import httpx
 from pydantic import Field
 
 from .schemas import StrictModel
@@ -42,8 +39,15 @@ def sensor_contexts(source, name, unit, device_class=None):
     import re
 
     text = (source + " " + name).lower().replace("_", " ")
+    if (
+        unit in ("Wh", "kWh")
+        and re.search(r"battery|storage", text)
+        and re.search(r"stored energy|remaining energy|remaining capacity|available energy", text)
+        and not re.search(r"nominal|rated|maximum|\bmax\b|forecast", text)
+    ):
+        return ["battery_stored_energy"]
     if re.search(
-        r"nominal|rated|installed capacity|maximum capacity|maximum battery|forecast|prediction|setpoint|limit",
+        r"nominal|rated|\bmax(?:imum)?\b|\bmin(?:imum)?\b|capacity|forecast|prediction|setpoint|limit",
         text,
     ):
         return []
@@ -52,7 +56,9 @@ def sensor_contexts(source, name, unit, device_class=None):
     household_label = bool(re.search(r"household|home load|home consumption", label))
     pv_label = bool(re.search(r"pv|solar|generation|yield", label))
     if unit in ("W", "kW", "Wh", "kWh"):
-        if pv_label or (not household_label and re.search(r"pv|solar|generation|yield", text)):
+        if (
+            pv_label or (not household_label and re.search(r"pv|solar|generation|yield", text))
+        ) and not re.search(r"solar to|pv to|self consumption", text):
             result.append("pv_generation")
         if (
             not pv_label
@@ -60,106 +66,58 @@ def sensor_contexts(source, name, unit, device_class=None):
                 r"household|home load|home consumption|load power|instantaneous load|total load|consumption",
                 text,
             )
-            and not re.search(r"battery charge|grid import|grid export|grid to", text)
+            and not re.search(
+                r"battery charge|grid import|grid export|grid consumption|grid to", text
+            )
         ):
             result.append("household_load")
-        if not result and device_class in ("power", "energy"):
-            result.append("power_energy_other")
+        if not result:
+            result.append(
+                "electrical_flow"
+                if re.search(
+                    r"grid import|grid export|grid consumption|grid to|battery charge|battery discharge|battery to|solar to|pv to",
+                    text,
+                )
+                else "power_energy_other"
+            )
     if unit == "%" and (
         re.search(r"\bsoc\b|state of charge", text)
-        or (device_class == "battery" and re.search(r"storage|inverter|ess", text))
+        or (
+            device_class == "battery"
+            and re.search(r"\bstorage\b|\binverter\b|\bess\b|alphaess", text)
+        )
     ):
         result.append("battery_soc")
     return result
 
 
-def connect(store, payload, service_origin, integration_token):
-    parsed = urlparse(payload.url)
-    if (
-        parsed.scheme not in ("http", "https")
-        or not parsed.hostname
-        or parsed.username
-        or parsed.password
-        or parsed.query
-        or parsed.fragment
-    ):
-        raise ValueError("Use your Home Assistant HTTP(S) origin without embedded credentials")
-    url = payload.url.rstrip("/")
-    with httpx.Client(
-        base_url=url,
-        headers={"Authorization": "Bearer " + payload.access_token},
-        timeout=20,
-        follow_redirects=False,
-    ) as client:
-        response = client.get("/api/config")
-        response.raise_for_status()
-        home = response.json()
-        response = client.get("/api/states")
-        response.raise_for_status()
-        sources = []
-        for state in response.json():
-            entity = state["entity_id"]
-            attrs = state.get("attributes", {})
-            if not entity.startswith("sensor.") or entity.startswith("sensor.energy_forecast_"):
-                continue
-            unit = attrs.get("unit_of_measurement")
-            if unit not in ("W", "kW", "Wh", "kWh", "%", "°C", "W/m²"):
-                continue
-            if unit in ("Wh", "kWh") and attrs.get("state_class") not in (
-                "total",
-                "total_increasing",
-            ):
-                continue
-            kind = (
-                "mean_power"
-                if unit in ("W", "kW")
-                else "counter"
-                if unit in ("Wh", "kWh")
-                else "state"
-            )
-            sources.append(
-                {
-                    "source": entity,
-                    "name": attrs.get("friendly_name", entity),
-                    "unit": unit,
-                    "kind": kind,
-                    "device_class": attrs.get("device_class"),
-                    "state_class": attrs.get("state_class"),
-                    "contexts": sensor_contexts(
-                        entity, attrs.get("friendly_name", entity), unit, attrs.get("device_class")
-                    ),
-                }
-            )
-        metadata = BridgeMetadata(
-            home={
-                "name": home.get("location_name", "Home"),
-                "latitude": home["latitude"],
-                "longitude": home["longitude"],
-                "timezone": home["time_zone"],
-            },
-            sources=sources,
-            ha_version=home.get("version"),
-        )
-        pairing = "integration_required"
-        flow = client.post("/api/config/config_entries/flow", json={"handler": "energy_forecast"})
-        if flow.status_code == 200:
-            result = flow.json()
-            if result.get("type") == "form" and result.get("step_id") == "user":
-                paired = client.post(
-                    "/api/config/config_entries/flow/" + result["flow_id"],
-                    json={"url": service_origin, "token": integration_token, "site_id": "home"},
-                )
-                if paired.status_code == 200 and paired.json().get("type") == "create_entry":
-                    pairing = "paired"
-                else:
-                    pairing = "manual_pairing_required"
-            elif result.get("reason") == "already_configured":
-                pairing = "paired"
+def connect(store, payload, service_origin=None, integration_token=None):
+    from .ha_client import HAClient, catalog, save_connection
+
+    client = HAClient(payload.url, payload.access_token)
+    home = client.get("config")
+    states = client.get("states")
+    statistics, registry = client.commands(
+        [{"type": "recorder/list_statistic_ids"}, {"type": "config/entity_registry/list"}]
+    )
+    excluded = {e["entity_id"] for e in registry if e.get("platform") == "energy_forecast"}
+    metadata = BridgeMetadata(
+        home={
+            "name": home.get("location_name", "Home"),
+            "latitude": home["latitude"],
+            "longitude": home["longitude"],
+            "timezone": home["time_zone"],
+        },
+        sources=catalog(states, statistics, excluded),
+        ha_version=home.get("version"),
+    )
+    save_connection(store, payload.url, payload.access_token)
     record = {
         **metadata.model_dump(mode="json"),
-        "url": url,
+        "url": client.url,
         "connected_at": stamp(),
-        "pairing": pairing,
+        "pairing": "direct_api",
+        "history_days": store.meta("ha_history_days") or 730,
     }
     store.meta("ha_bridge", record)
     return record

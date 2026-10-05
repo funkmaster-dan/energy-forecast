@@ -487,7 +487,7 @@ function App() {
   const [config, setConfig] = useState<Config>(defaults);
   const [saved, setSaved] = useState<Config | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
-  const [diagnostics, setDiagnostics] = useState<Record<string, unknown>>({});
+  const [diagnostics, setDiagnostics] = useState<Record<string, any>>({});
   const [data, setData] = useState<unknown[]>([]);
   const [jobs, setJobs] = useState<Record<string, unknown>[]>([]);
   const [models, setModels] = useState<Record<string, unknown>[]>([]);
@@ -729,7 +729,10 @@ function App() {
                   label={
                     expired
                       ? "Lease expired"
-                      : forecast?.status?.replaceAll("_", " ") || "Warming up"
+                      : forecast?.status === "shadow"
+                        ? "Forecasting · advisory"
+                        : forecast?.status?.replaceAll("_", " ") ||
+                          "Collecting history"
                   }
                   color={ready ? "success" : "default"}
                 />
@@ -757,6 +760,45 @@ function App() {
             )}
             {tab === "Overview" && (
               <>
+                <Paper sx={{ p: 3, mb: 3 }}>
+                  <Typography variant="h6">Home Assistant data</Typography>
+                  <Typography>
+                    {diagnostics.ha_ingestion?.status === "connected"
+                      ? "Connected directly to HA’s API"
+                      : "Waiting for the HA API connection"}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    {diagnostics.ha_ingestion?.last_success_at
+                      ? "Last successful read: " +
+                        new Date(
+                          diagnostics.ha_ingestion.last_success_at,
+                        ).toLocaleString()
+                      : "Connect HA in Setup to start collecting readings and history."}
+                  </Typography>
+                  {diagnostics.ha_history && (
+                    <Typography>
+                      History imported through{" "}
+                      {new Date(
+                        diagnostics.ha_history.through,
+                      ).toLocaleDateString()}{" "}
+                      ·{" "}
+                      {diagnostics.ha_history.complete
+                        ? "recent import complete"
+                        : "import in progress"}
+                    </Typography>
+                  )}
+                  {(diagnostics.ha_ingestion?.sources || []).map(
+                    (source: any) => (
+                      <Typography
+                        variant="body2"
+                        key={source.source}
+                        sx={{ overflowWrap: "anywhere" }}
+                      >
+                        {source.source} · {source.status.replaceAll("_", " ")}
+                      </Typography>
+                    ),
+                  )}
+                </Paper>
                 <Box className="metrics">
                   <Metric
                     label="Permitted battery export"
@@ -774,9 +816,17 @@ function App() {
                     }
                   />
                   <Metric
-                    label="PV · next 48 hours"
-                    value={format(forecast?.totals?.pv_48h_kwh, "kWh")}
-                    detail="AC physical baseline / active model"
+                    label="Panel generation · next 48 hours"
+                    value={format(
+                      forecast?.totals?.pv_48h_kwh ??
+                        forecast?.totals?.pv_bank_48h_kwh,
+                      "kWh",
+                    )}
+                    detail={
+                      forecast?.totals?.pv_48h_kwh != null
+                        ? "AC forecast"
+                        : "At the selected bank sensors’ measurement boundary"
+                    }
                   />
                   <Metric
                     label="Household · next 48 hours"
@@ -895,17 +945,57 @@ function App() {
                       : "Choose public and school jurisdictions separately. Import official date ranges and explicitly confirm covered years; uncovered years stay unknown."}
                   </Typography>
                   {tab === "Tariff" ? (
-                    <TariffForm
-                      value={config.tariff}
-                      onChange={(tariff) => setConfig({ ...config, tariff })}
-                    />
+                    <Stack spacing={2}>
+                      <Button
+                        onClick={() =>
+                          void action(async () => {
+                            const result = await api<any>(
+                              base + "/home-assistant/import-tariff",
+                              "POST",
+                            );
+                            setConfig(result.configuration);
+                            setSaved(result.configuration);
+                            setNotice(
+                              "Tariff imported from Energy Tariff Helper, including GST.",
+                            );
+                            await load();
+                          })
+                        }
+                      >
+                        Import from HA Energy Tariff Helper
+                      </Button>
+                      <TariffForm
+                        value={config.tariff}
+                        onChange={(tariff) => setConfig({ ...config, tariff })}
+                      />
+                    </Stack>
                   ) : (
-                    <CalendarForm
-                      value={config.calendars}
-                      onChange={(calendars) =>
-                        setConfig({ ...config, calendars })
-                      }
-                    />
+                    <Stack spacing={2}>
+                      <Button
+                        onClick={() =>
+                          void action(async () => {
+                            const result = await api<Config>(
+                              base + "/calendar/import-official",
+                              "POST",
+                            );
+                            setConfig(result);
+                            setSaved(result);
+                            setNotice(
+                              "Official SA government school dates imported. Other school profiles may differ.",
+                            );
+                            await load();
+                          })
+                        }
+                      >
+                        Import official SA government school calendar
+                      </Button>
+                      <CalendarForm
+                        value={config.calendars}
+                        onChange={(calendars) =>
+                          setConfig({ ...config, calendars })
+                        }
+                      />
+                    </Stack>
                   )}
                   <Button
                     variant="contained"
@@ -1190,18 +1280,133 @@ function App() {
                     <Typography variant="h5">{title}</Typography>
                     {i === 0 && (
                       <>
+                        {diagnostics.pv_ac_calibration && (
+                          <Paper variant="outlined" sx={{ p: 2, my: 2 }}>
+                            <Typography variant="h6">
+                              Post-inverter validation ·{" "}
+                              {diagnostics.pv_ac_calibration.status.replaceAll(
+                                "_",
+                                " ",
+                              )}
+                            </Typography>
+                            {diagnostics.pv_ac_calibration.test_mae_kw !=
+                              null && (
+                              <>
+                                <Typography>
+                                  Held-out hourly MAE:{" "}
+                                  {format(
+                                    diagnostics.pv_ac_calibration.test_mae_kw,
+                                    "kW",
+                                  )}{" "}
+                                  · bias:{" "}
+                                  {format(
+                                    diagnostics.pv_ac_calibration.test_bias_kw,
+                                    "kW",
+                                  )}
+                                </Typography>
+                                <Typography>
+                                  AC/DC conversion factor:{" "}
+                                  {(
+                                    diagnostics.pv_ac_calibration.efficiency *
+                                    100
+                                  ).toFixed(1)}
+                                  % · test samples:{" "}
+                                  {
+                                    diagnostics.pv_ac_calibration.split_counts
+                                      ?.test
+                                  }
+                                </Typography>
+                                {diagnostics.pv_ac_calibration
+                                  .energy_total_check?.test_mae_kwh != null && (
+                                  <Typography>
+                                    Independent energy-counter check:{" "}
+                                    {format(
+                                      diagnostics.pv_ac_calibration
+                                        .energy_total_check.test_mae_kwh,
+                                      "kWh",
+                                    )}{" "}
+                                    MAE over{" "}
+                                    {
+                                      diagnostics.pv_ac_calibration
+                                        .energy_total_check.covered_days
+                                    }{" "}
+                                    covered test days.
+                                  </Typography>
+                                )}
+                              </>
+                            )}
+                          </Paper>
+                        )}
                         <Button
                           onClick={() => void action(() => job("pv_calibrate"))}
                         >
                           Calibrate panel banks
                         </Button>
-                        <JsonView value={diagnostics.pv_bank_calibration} />
+                        <Button
+                          onClick={() =>
+                            void action(async () => {
+                              await api(base + "/models/pv/rollback", "POST");
+                              await load();
+                              setNotice(
+                                "Previous compatible bank fit restored.",
+                              );
+                            })
+                          }
+                        >
+                          Restore previous bank fit
+                        </Button>
+                        {Object.entries(
+                          diagnostics.pv_bank_calibration?.banks || {},
+                        ).map(([id, result]: [string, any]) => (
+                          <Paper
+                            key={id}
+                            variant="outlined"
+                            sx={{ p: 2, mt: 2 }}
+                          >
+                            <Typography variant="h6">
+                              {config.banks.find((b) => b.id === id)?.name ||
+                                id}{" "}
+                              · {result.status.replaceAll("_", " ")}
+                            </Typography>
+                            {result.test_mae_kw != null ? (
+                              <>
+                                <Typography>
+                                  Held-out MAE:{" "}
+                                  {format(result.test_mae_kw, "kW")} · baseline:{" "}
+                                  {format(result.baseline_test_mae_kw, "kW")} ·
+                                  bias: {format(result.test_bias_kw, "kW")}
+                                </Typography>
+                                <Typography>
+                                  Train / calibration / test samples:{" "}
+                                  {result.split_counts?.train} /{" "}
+                                  {result.split_counts?.calibration} /{" "}
+                                  {result.split_counts?.test}
+                                </Typography>
+                                <Typography variant="body2">
+                                  Test period:{" "}
+                                  {result.test_range
+                                    ?.map((t: string) =>
+                                      new Date(t).toLocaleDateString(),
+                                    )
+                                    .join(" – ")}
+                                  . Historical irradiance holdout; live forecast
+                                  accuracy is still being collected.
+                                </Typography>
+                              </>
+                            ) : (
+                              <Typography>
+                                {result.reason || "Collecting measured history"}{" "}
+                                · {result.hours ?? 0} covered hours
+                              </Typography>
+                            )}
+                          </Paper>
+                        ))}
                       </>
                     )}
                     <Typography color="text.secondary" sx={{ my: 2 }}>
                       {
                         [
-                          "Per-bank output uses a physical allocation until independently measured targets support fitting. PV trees require matching archived weather vintages.",
+                          "Bank models learn output from measured generation and historical irradiance. Test data is held back from fitting; failed candidates retain the previous working model.",
                           "View candidate versus weekday baseline metrics and declared train/calibration/test ranges in Models. Weather features are checked against the calendar-only model using matching issue-time forecasts and disjoint holdouts.",
                           "Interval ranges and whole-horizon risk are separate. Complete paired residual blocks retain temporal and PV/load dependence. Insufficient tail evidence keeps export disabled.",
                           "Configured efficiencies remain active until independently measured AC flows and stored-energy changes identify separate charge/discharge efficiencies. No test cycling is performed.",
@@ -1242,8 +1447,25 @@ function App() {
                     ) : (
                       <TextField
                         key={key}
-                        label={key.replaceAll("_", " ")}
-                        value={value}
+                        label={
+                          (
+                            {
+                              capacity_kwh: "Usable battery capacity · kWh",
+                              upper_kwh: "Maximum stored energy · kWh",
+                              reserve_kwh: "Minimum reserve · kWh",
+                              charge_kw: "Maximum AC charge power · kW",
+                              discharge_kw: "Maximum AC discharge power · kW",
+                              eta_charge: "Charge efficiency · %",
+                              eta_discharge: "Discharge efficiency · %",
+                              standby_kw: "Standby draw · kW",
+                              taper_start_pct: "Charge taper starts at · %",
+                              parameter_source: "Parameter source",
+                            } as Record<string, string>
+                          )[key] || key.replaceAll("_", " ")
+                        }
+                        value={
+                          key.startsWith("eta_") ? Number(value) * 100 : value
+                        }
                         type={typeof value === "number" ? "number" : "text"}
                         inputProps={{ step: "any" }}
                         onChange={(e) =>
@@ -1251,9 +1473,15 @@ function App() {
                             ...config,
                             battery: {
                               ...config.battery,
+                              ...(key === "capacity_kwh" &&
+                              config.battery.upper_kwh ===
+                                config.battery.capacity_kwh
+                                ? { upper_kwh: Number(e.target.value) }
+                                : {}),
                               [key]:
                                 typeof value === "number"
-                                  ? Number(e.target.value)
+                                  ? Number(e.target.value) /
+                                    (key.startsWith("eta_") ? 100 : 1)
                                   : e.target.value,
                             },
                           })
@@ -1277,6 +1505,85 @@ function App() {
                   }
                 />
                 <Box>
+                  <Typography variant="h6" sx={{ mt: 3 }}>
+                    Planning and freshness settings
+                  </Typography>
+                  <Box className="fields">
+                    {[
+                      ["export_limit_kw", "Site export limit · kW"],
+                      ["import_limit_kw", "Site import limit · kW"],
+                      [
+                        "shared_inverter_kw",
+                        "Shared AC inverter limit · kW (optional)",
+                      ],
+                      [
+                        "paid_import_tolerance_kwh",
+                        "Permitted paid import · kWh",
+                      ],
+                      [
+                        "soc_freshness_seconds",
+                        "Maximum battery-report age · seconds",
+                      ],
+                      [
+                        "weather_freshness_seconds",
+                        "Maximum weather age · seconds",
+                      ],
+                      ["lease_seconds", "Plan lease · seconds"],
+                      ["target_confidence", "Target path confidence · %"],
+                      ["scenario_count", "Simulation scenarios"],
+                    ].map(([key, label]) => (
+                      <TextField
+                        key={key}
+                        label={label}
+                        type="number"
+                        value={
+                          config[key] == null
+                            ? ""
+                            : key === "target_confidence"
+                              ? Number(config[key]) * 100
+                              : Number(config[key])
+                        }
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            [key]:
+                              e.target.value === "" &&
+                              key === "shared_inverter_kw"
+                                ? null
+                                : Number(e.target.value) /
+                                  (key === "target_confidence" ? 100 : 1),
+                          })
+                        }
+                      />
+                    ))}
+                    {[
+                      [
+                        "grid_charge_intent",
+                        "Assume configured free-period charging will be executed",
+                      ],
+                      [
+                        "mandatory_phase_limits",
+                        "Phase limits are mandatory for this installation",
+                      ],
+                      [
+                        "required_dynamic_limit",
+                        "Require a live export-limit sensor",
+                      ],
+                    ].map(([key, label]) => (
+                      <FormControlLabel
+                        key={key}
+                        label={label}
+                        control={
+                          <Switch
+                            checked={Boolean(config[key])}
+                            onChange={(_, checked) =>
+                              setConfig({ ...config, [key]: checked })
+                            }
+                          />
+                        }
+                      />
+                    ))}
+                  </Box>
                   <Button variant="contained" onClick={() => void action(save)}>
                     Save battery assumptions
                   </Button>
@@ -1386,7 +1693,7 @@ function App() {
           </>
         )}
         <Typography variant="caption" color="text.secondary" component="footer">
-          Energy Forecast 0.1 · Forecasting runs outside Home Assistant. Battery
+          Energy Forecast 0.3 · Forecasting runs outside Home Assistant. Battery
           control remains with your HA automations.
         </Typography>
         <Dialog open={!!review} onClose={() => setReview(null)}>

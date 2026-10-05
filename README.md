@@ -1,8 +1,8 @@
 # Energy Forecast
 
-Self-hosted solar and household forecasts with a configurable Australian fixed TOU tariff, a causal battery simulator, and a separate [Home Assistant bridge](https://github.com/funkmaster-dan/ha-energy-forecast).
+Self-hosted solar and household forecasts with a configurable Australian fixed TOU tariff, a causal battery simulator, and an optional [Home Assistant integration](https://github.com/funkmaster-dan/ha-energy-forecast).
 
-**0.2.0 is a forecasting and shadow-planning alpha. Discretionary export authorization is disabled.** A successful build, point forecast, or Monte Carlo simulation does not establish 99% whole-horizon safety. See [delivery status](docs/status.md) for completed checks and remaining work. Neither repository operates a battery.
+**0.3.0 is a forecasting and shadow-planning alpha. Discretionary export authorization is disabled.** A successful build, point forecast, or Monte Carlo simulation does not establish 99% whole-horizon safety. See [delivery status](docs/status.md) for completed checks and remaining work. Neither repository operates a battery.
 
 ## Run with rootless Podman
 
@@ -31,13 +31,14 @@ Docker Engine is not installed on the development workstation. The image has bee
 
 ## Configure and pair HA
 
-1. Install the HACS custom repository and restart HA, then open **Setup** in the service GUI. Connect with your HA URL and a long-lived access token. The token is used for this connection only and is not retained by the service. If the integration is installed, setup pairs it automatically; otherwise it shows installation and manual pairing instructions.
+1. Open **Setup** and connect with your HA URL and a long-lived access token. The service reads HA directly through its REST/WebSocket APIs; no custom integration is required for ingestion. The token is stored in a private mode-0600 file in the data volume and excluded from diagnostics. The optional HACS integration publishes forecasts back to HA.
+
 2. Review the home location imported from HA on the map. Click the map to adjust it if needed.
 3. Select household consumption and battery SoC from context-filtered HA sensor lists. Use composition forms for multiple meters or historical replacements.
-4. Add each panel bank, select its generation sensor, and enter tilt and azimuth (north 0°, east 90°, south 180°, west 270°). No nameplate capacity or efficiency is required: historical generation and Open-Meteo irradiance calibrate its effective output scale. At least 14 days of covered history is needed; validation uses a chronological holdout. Unverified AC/DC inputs do not authorize an AC export plan.
+4. Add each panel bank, select its generation sensor, and enter tilt and azimuth (north 0°, east 90°, south 180°, west 270°). No nameplate capacity or efficiency is required: historical generation and Open-Meteo irradiance calibrate its effective output scale. At least 14 days of covered history is needed; validation uses chronological training/calibration/test splits with gaps. Bank-specific boosted candidates activate only when held-out checks pass; failed candidates retain the previous working fit. An optional measured AC solar total validates DC-bank to AC conversion separately. Unverified AC/DC inputs do not authorize an AC export plan.
 5. Review and save. Configure battery parameters, TOU periods and calendars through their forms; no JSON editing is required. Verify battery capacity, efficiencies, reserve and limits, and set a terminal obligation beyond the forecast horizon.
 
-Measured inputs arrive only through HA; Open-Meteo is fetched directly by the service. Raw data and revisions remain local. Source changes and configuration edits invalidate existing leases.
+Measured inputs are read directly from HA; Open-Meteo is fetched directly by the service. Raw data and revisions remain local. Source changes and configuration edits invalidate existing leases.
 
 ## Development
 

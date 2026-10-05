@@ -74,6 +74,25 @@ def features(config, instant, issue_time=None):
                 result["is_public_holiday"] = True
             if event.kind in ("school_holiday", "pupil_free") and event.profile in school:
                 school[event.profile] = True
+    unavailable = [
+        event
+        for event in calendar.events
+        if event.kind == "school_holiday"
+        and event.profile in school
+        and event.start.year == day.year
+        and issue_time
+        and event.known_at
+        and event.known_at > issue_time
+    ]
+    if unavailable and all(
+        event.known_at and event.known_at > issue_time
+        for event in calendar.events
+        if event.kind == "school_holiday"
+        and event.start.year == day.year
+        and event.profile in school
+    ):
+        result["coverage"] = "school_schedule_not_known_at_issue"
+        return result
     values = list(school.values())
     result["is_school_holiday"] = (
         (any(values) if calendar.school_combination == "any" else all(values)) if values else None
@@ -151,4 +170,7 @@ def import_events(content, format, source, version, kind, zone="Australia/Adelai
         ]
     else:
         raise ValueError("Use json, csv or ics")
+    from .store import now
+
+    events = [v if v.known_at else v.model_copy(update={"known_at": now()}) for v in events]
     return [v.model_dump(mode="json") for v in events]

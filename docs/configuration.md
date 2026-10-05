@@ -53,3 +53,9 @@ References: [Fair Work 2026 holidays](https://www.fairwork.gov.au/employment-con
 Live forecast refresh is automatic. `weather_history` jobs accept a 0–31-day `{ "start":"YYYY-MM-DD", "end":"YYYY-MM-DD" }` page of reanalysis, labeled pretraining-only. `weather_run` accepts a past UTC initialization `run` and optional documented `available_at`, and requires an explicit configured weather model. Unknown run availability stays unknown; initialization is not receipt/availability. Original arrays and revisions remain archived.
 
 Provider references: [forecast interval semantics](https://open-meteo.com/en/docs), [single-run archives and availability](https://open-meteo.com/en/docs/single-runs-api). Archive variable/model/date coverage must be checked for the actual site. Weather import failure never fabricates future irradiance.
+
+## Direct HA setup and measurement roles
+
+Connect HA through Setup. Current measurements come from its APIs; the optional HACS package publishes forecasts. Use date-bounded source profiles for retired meters, and give current source aliases higher priority. Power readings support hourly shape; cumulative generation readings support energy-total checks. Fallback selects one accepted quantity per interval and never sums redundant measurements. Each bank needs independent generation sensors.
+
+Source boundaries and meter epochs are ordinary composition controls. Bank boundaries and shared inverter groups are in the bank forms; nameplate capacity is not required for learned bank models. Battery capacity, maximum stored energy, reserve, AC power, efficiencies, phase/dynamic-limit requirements, free-charge intent, freshness and lease settings are editable in Battery. Private HA connection credentials are stored with mode 0600 and included only in authenticated private backups.

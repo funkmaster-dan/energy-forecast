@@ -45,7 +45,7 @@ def canonical(store, config, feature, training_cutoff=None, measured=False):
 
 
 def load_profile(store, config, intervals, issue):
-    records = canonical(store, config, "household_load")
+    records = canonical(store, config, "household_load", training_cutoff=issue)
     groups, broad = defaultdict(list), defaultdict(list)
     zone = ZoneInfo(config.timezone)
     for record in records:
@@ -144,12 +144,18 @@ def refresh(store):
         for bank in config.banks
         if calibration.get("banks", {}).get(bank.id, {}).get("geometry_signature")
         == geometry_signature(config, bank)
+        and calibration.get("banks", {}).get(bank.id, {}).get("measurement_boundary")
+        == bank.measurement_boundary
     }
     total_pv, banks, poa = (
         physical_pv(config, weather_rows, learned_scales=scales)
         if weather_rows
         else (np.array([]), {}, {})
     )
+    if weather_rows:
+        from .bank_models import predict_banks
+
+        total_pv, banks = predict_banks(store, config, weather_rows, banks, poa, calibration)
     load, count = load_profile(store, config, weather_rows, issue)
     load_low, load_high, model_id = None, None, None
     if weather_rows and len(weather_rows) <= 49 and all(v is not None for v in load):
@@ -174,7 +180,18 @@ def refresh(store):
         )
     if not config.banks:
         reason.append("pv_geometry_missing")
-    if any(b.dc_kwp is None and b.measurement_boundary != "AC" for b in config.banks):
+    from .ac_calibration import signature as ac_signature
+
+    ac_calibration = store.meta("pv_ac_calibration") or {}
+    ac_verified = bool(
+        ac_calibration.get("holdout_accepted")
+        and ac_calibration.get("signature") == ac_signature(config)
+    )
+    if ac_verified:
+        total_pv *= ac_calibration["efficiency"]
+    if not ac_verified and any(
+        b.dc_kwp is None and b.measurement_boundary != "AC" for b in config.banks
+    ):
         reason.append("pv_boundary_unverified")
     # Keep individual measured-boundary bank forecasts, but never sum DC/unknown as AC.
     if "pv_boundary_unverified" in reason:
@@ -207,6 +224,7 @@ def refresh(store):
             )
     if config.terminal_reserve_kwh is None:
         reason.append("terminal_obligation_unbounded")
+    bank_total = sum(banks.values(), np.zeros(len(weather_rows)))
     rows, sim_intervals, sim_pv, sim_load = [], [], [], []
     origin_indices = []
     for i, weather_row in enumerate(weather_rows):
@@ -229,6 +247,8 @@ def refresh(store):
                 "pv_kwh": number(total_pv[i] * hours),
                 "load_kwh": number(load[i] * hours) if load[i] is not None else None,
                 "banks_kw": {key: number(value[i]) for key, value in banks.items()},
+                "pv_bank_kw": number(bank_total[i]),
+                "pv_bank_kwh": number(bank_total[i] * hours),
                 "poa_w_m2": {key: number(value[i]) for key, value in poa.items()},
                 "ghi_w_m2": weather_row["shortwave_radiation"],
                 "dni_w_m2": weather_row["direct_normal_irradiance"],
@@ -253,7 +273,15 @@ def refresh(store):
             origin_indices.append(i)
             sim_pv.append(number(total_pv[i]))
             sim_load.append(load[i])
-    status = "warming_up" if reason else "shadow"
+    forecast_blockers = {
+        "weather_missing",
+        "weather_horizon_incomplete",
+        "load_history_missing",
+        "weather_fields_missing",
+        "pv_calibration_required",
+        "pv_geometry_missing",
+    }
+    status = "warming_up" if forecast_blockers.intersection(reason) else "shadow"
     plan = {
         "safe_battery_export_remaining_kwh": 0.0,
         "safe_battery_export_now_kwh": 0.0,
@@ -335,19 +363,60 @@ def refresh(store):
         if rows and all(r["load_kwh"] is not None for r in rows)
         else None,
     }
+    totals["pv_bank_48h_kwh"] = (
+        sum(r["pv_bank_kwh"] for r in rows)
+        if rows and all(r["pv_bank_kwh"] is not None for r in rows)
+        else None
+    )
     calibration = store.meta("calibration") or {}
     residual_file = store.root / "models" / "paired-residuals.npz"
     model_versions = {
-        "pv": "physical-v1",
+        "pv": (
+            "bank-models-"
+            + digest(
+                {
+                    "scales": scales,
+                    "models": {
+                        k: v.get("model_id")
+                        for k, v in (store.meta("pv_bank_calibration") or {})
+                        .get("banks", {})
+                        .items()
+                    },
+                    "ac_scale": ac_calibration.get("efficiency") if ac_verified else None,
+                }
+            )[:16]
+        )
+        if scales
+        else "physical-v1",
         "load": model_id or "weekday-profile-v1",
         "uncertainty": model_id,
         "adapter": (store.meta("recent_bias") or {}).get("id") if model_id else None,
     }
+    load_bundle = (
+        next((m for m in store.documents("models", 100) if m["id"] == model_id), {})
+        if model_id
+        else {}
+    )
+    model_versions["validation_cohort"] = digest(
+        {
+            "pv": {
+                b.id: (store.meta("pv_bank_calibration") or {})
+                .get("banks", {})
+                .get(b.id, {})
+                .get("model_kind", "geometry-scaled")
+                for b in config.banks
+            },
+            "load": load_bundle.get("kind", "weekday-profile-v1"),
+            "weather": config.weather_model,
+            "algorithm": "causal-household-first-v1",
+        }
+    )
     if (
         not simulation_blockers.intersection(reason)
         and "soc_outside_bounds" not in reason
         and calibration.get("complete_nonoverlapping_paths", 0) >= 30
-        and calibration.get("model_signature") == digest(model_versions)
+        and calibration.get("model_signature")
+        == model_versions.get("validation_cohort", digest(model_versions))
         and calibration.get("configuration_hash") == digest(payload)
         and residual_file.exists()
     ):

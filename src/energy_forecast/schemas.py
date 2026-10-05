@@ -62,6 +62,12 @@ class Batch(StrictModel):
 
 
 class Source(StrictModel):
+    epoch: str | None = Field(
+        default=None, min_length=1, max_length=100, exclude_if=lambda v: v is None
+    )
+    measurement_boundary: Literal["AC", "DC", "stored", "environment", "unknown"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
     source: str
     priority: int = 0
     valid_from: datetime | None = None
@@ -247,6 +253,16 @@ class Configuration(StrictModel):
                 and self.inverter_limits_kw[bank.inverter_group] <= 0
             ):
                 raise ValueError("Known inverter limits must be positive")
+        bank_sources = [
+            source.source
+            for mapping in self.mappings
+            if mapping.feature in {b.target for b in self.banks}
+            for source in mapping.sources
+        ]
+        if len(set(bank_sources)) != len(bank_sources):
+            raise ValueError(
+                "Each panel bank needs independent generation sensors; do not reuse a whole-array sensor across banks"
+            )
         if len({m.feature for m in self.mappings}) != len(self.mappings):
             raise ValueError("Mapping features must be unique")
         if (

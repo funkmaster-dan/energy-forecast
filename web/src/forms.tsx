@@ -355,6 +355,28 @@ export function CalendarForm({
               />
             ))}
             <TextField
+              type="datetime-local"
+              label="First known at · UTC"
+              InputLabelProps={{ shrink: true }}
+              value={event.known_at ? String(event.known_at).slice(0, 16) : ""}
+              helperText="Used to keep later schedules out of historical validation."
+              onChange={(e) =>
+                set(
+                  "events",
+                  events.map((r, j) =>
+                    j === i
+                      ? {
+                          ...r,
+                          known_at: e.target.value
+                            ? e.target.value + ":00Z"
+                            : null,
+                        }
+                      : r,
+                  ),
+                )
+              }
+            />
+            <TextField
               select
               label="Event type"
               value={event.kind || "household"}
@@ -403,6 +425,7 @@ export function CalendarForm({
               source: "Household",
               version: "1",
               profile: "government",
+              known_at: new Date().toISOString(),
             },
           ])
         }
@@ -430,10 +453,43 @@ export function MappingForm({
         <Paper variant="outlined" key={i} sx={{ p: 2 }}>
           <Box className="fields">
             <TextField
-              label="Target / feature"
+              select
+              label="Measurement profile"
               value={r.feature}
               onChange={(e) => set(i, "feature", e.target.value)}
-            />
+            >
+              {Array.from(
+                new Set([
+                  "household_load",
+                  "battery_soc",
+                  "pv_generation",
+                  "pv_generation_energy",
+                  "battery_charge",
+                  "battery_discharge",
+                  "battery_stored_energy",
+                  "export_limit",
+                  "outdoor_temperature",
+                  ...rows.map((row) => row.feature),
+                ]),
+              ).map((feature) => (
+                <MenuItem key={feature} value={feature}>
+                  {(
+                    {
+                      household_load: "Household consumption",
+                      battery_soc: "Battery state of charge",
+                      pv_generation: "Post-inverter solar power",
+                      pv_generation_energy: "Solar energy counter",
+                      battery_charge: "Battery AC charging",
+                      battery_discharge: "Battery AC discharge",
+                      battery_stored_energy:
+                        "Independent stored battery energy",
+                      export_limit: "Live export limit",
+                      outdoor_temperature: "Outdoor temperature",
+                    } as Record<string, string>
+                  )[feature] || feature.replaceAll("_", " ")}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               select
               label="Combine sources"
@@ -477,6 +533,12 @@ export function MappingForm({
                   {sources
                     .filter((s) => {
                       const feature = String(r.feature || "");
+                      if (feature === "battery_stored_energy")
+                        return (
+                          ["Wh", "kWh"].includes(s.unit) &&
+                          s.kind === "state" &&
+                          s.contexts?.includes("battery_stored_energy")
+                        );
                       if (feature === "battery_soc")
                         return (
                           s.unit === "%" &&
@@ -494,6 +556,9 @@ export function MappingForm({
                             : "pv_generation";
                         return (
                           r.mode === "derived" ||
+                          (r.mode === "sum" &&
+                            context === "household_load" &&
+                            s.contexts?.includes("power_energy_other")) ||
                           !s.contexts ||
                           s.contexts.includes(context)
                         );
@@ -507,6 +572,27 @@ export function MappingForm({
                       </MenuItem>
                     ))}
                 </TextField>
+                <TextField
+                  select
+                  label="Measurement boundary"
+                  value={source.measurement_boundary || ""}
+                  onChange={(e) =>
+                    update("measurement_boundary", e.target.value || null)
+                  }
+                >
+                  <MenuItem value="">Use profile default</MenuItem>
+                  {["AC", "DC", "stored", "environment", "unknown"].map((v) => (
+                    <MenuItem key={v} value={v}>
+                      {v}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Meter epoch (optional)"
+                  value={source.epoch || ""}
+                  helperText="Change this when the meter or its meaning changes."
+                  onChange={(e) => update("epoch", e.target.value || null)}
+                />
                 <NumberField
                   label="Priority"
                   value={source.priority || 0}

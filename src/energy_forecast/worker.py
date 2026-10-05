@@ -48,6 +48,9 @@ def run(directory, identifier):
             from .solar_calibration import calibrate_banks
 
             result = calibrate_banks(store, config)
+            from .ac_calibration import calibrate_ac
+
+            result["ac_conversion"] = calibrate_ac(store, config)
             enqueue(store, "forecast")
         elif kind == "train":
             from .learning import train
@@ -77,7 +80,7 @@ def run(directory, identifier):
                 directory.mkdir(exist_ok=True)
                 pd.concat(frames).to_parquet(directory / "canonical.parquet", index=False)
             result = {"profiles": len(frames)}
-        update(store, identifier, status="completed", progress=1, result=result)
+        update(store, identifier, status="completed", progress=1, result=result, reason=None)
     except Exception as error:
         # Exceptions may contain private coordinates/request URLs. Keep them local only.
         update(store, identifier, status="failed", reason=type(error).__name__)

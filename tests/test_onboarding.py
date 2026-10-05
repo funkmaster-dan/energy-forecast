@@ -8,7 +8,7 @@ from energy_forecast.api import create_app
 from energy_forecast.home_assistant import ConnectionRequest, connect
 
 
-def test_ha_connect_defaults_location_and_does_not_store_access_token(store, monkeypatch):
+def test_ha_connect_defaults_location_and_keeps_access_token_out_of_metadata(store, monkeypatch):
     original = httpx.Client
     calls = []
 
@@ -49,6 +49,9 @@ def test_ha_connect_defaults_location_and_does_not_store_access_token(store, mon
             )
         return httpx.Response(200, json={"type": "create_entry"})
 
+    from energy_forecast.ha_client import HAClient
+
+    monkeypatch.setattr(HAClient, "commands", lambda self, commands: [[], []])
     monkeypatch.setattr(
         httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
     )
@@ -59,12 +62,16 @@ def test_ha_connect_defaults_location_and_does_not_store_access_token(store, mon
         "synthetic-integration-token",
     )
     assert record["home"]["latitude"] == -35.1
-    assert record["pairing"] == "paired"
+    assert record["pairing"] == "direct_api"
     assert len(record["sources"]) == 1
     persisted = json.dumps(store.meta("ha_bridge"))
     assert "synthetic-one-use-token" not in persisted
     assert "unrelated_private_attribute" not in persisted
-    assert json.loads(calls[-1].content)["url"] == "http://service.test:8080"
+    assert (store.root / "home-assistant-connection.json").stat().st_mode & 0o777 == 0o600
+    assert (
+        json.loads((store.root / "home-assistant-connection.json").read_text())["token"]
+        == "synthetic-one-use-token"
+    )
 
 
 def test_ha_metadata_can_pair_before_site_configuration(tmp_path):

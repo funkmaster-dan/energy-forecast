@@ -388,6 +388,39 @@
     "Source": {
       "additionalProperties": false,
       "properties": {
+        "epoch": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Epoch"
+        },
+        "measurement_boundary": {
+          "anyOf": [
+            {
+              "enum": [
+                "AC",
+                "DC",
+                "stored",
+                "environment",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measurement Boundary"
+        },
         "source": {
           "title": "Source",
           "type": "string"

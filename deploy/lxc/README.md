@@ -6,6 +6,6 @@ Before installing, inspect the LXC allocation, `docker ps`, listening ports and 
 
 The default two CPU/two GB application limit is conservative for shared minor services. It is a limit to verify with this host, not a proven capacity for long training jobs. Initial live verification should begin with data collection and baseline forecasts; adjust resource limits only after measuring this installation.
 
-A named volume retains all installation data. The image runs as 10001:10001 and has no HA credentials or device control. Retrieve the local claim key with `docker exec energy-forecast cat /data/setup-key`, then choose your own administrator password in the GUI. Create a scoped integration token for HACS and pair using the LXC's reachable service URL.
+A named volume retains all installation data. The image runs as 10001:10001 and keeps HA credentials in a private data-volume file and has no device control. Retrieve the local claim key with `docker exec energy-forecast cat /data/setup-key`, then choose your own administrator password in the GUI. Connect HA directly in Setup. Optionally create a scoped integration token for HACS forecast publication using the reachable service URL.
 
 Keep `.env`, backups, credentials and commissioning records private. Container health and verified input freshness are separate from export readiness. The alpha authorizes no discretionary export.

@@ -24,6 +24,7 @@ export type HAInfo = {
   connected_at: string;
   home: { name: string; latitude: number; longitude: number; timezone: string };
   sources: RecordValue[];
+  history_days?: number;
 };
 type Request = (path: string, method?: string, data?: unknown) => Promise<any>;
 export function LocationMap({
@@ -244,7 +245,7 @@ export function SetupFlow({
     }
     await request("/v1/sites/home/bridge/inputs", "PUT", inputs);
     onNotice(
-      "Setup saved. The HA bridge will collect the selected sensors and history.",
+      "Setup saved. The service will read the selected sensors and history directly from HA.",
     );
   }
   const steps = [
@@ -296,7 +297,7 @@ export function SetupFlow({
               value={access}
               onChange={(e) => setAccess(e.target.value)}
               autoComplete="off"
-              helperText="Use a long-lived token from your HA profile. It is used for this connection and is not stored by the service."
+              helperText="Use a long-lived token from your HA profile. The service stores it privately to read selected sensors and Recorder history directly from HA."
             />
             <Button
               variant="contained"
@@ -308,10 +309,12 @@ export function SetupFlow({
             {ha && (
               <Alert severity="success">
                 Connected to {ha.home.name}
-                {ha.pairing === "paired" ? " · HACS bridge paired" : ""}
+                {["paired", "direct_api"].includes(ha.pairing)
+                  ? " · API connected"
+                  : ""}
               </Alert>
             )}
-            {ha && ha.pairing !== "paired" && (
+            {ha && !["paired", "direct_api"].includes(ha.pairing) && (
               <Alert severity="info">
                 Install{" "}
                 <a
@@ -332,6 +335,44 @@ export function SetupFlow({
                   />
                 )}
               </Alert>
+            )}
+            {ha && (
+              <Stack spacing={2}>
+                <Button
+                  onClick={() =>
+                    void request(
+                      "/v1/sites/home/home-assistant/refresh-sensors",
+                      "POST",
+                    )
+                      .then(setHA)
+                      .catch((e) => onError(e.message))
+                  }
+                >
+                  Refresh HA sensor list
+                </Button>
+                <TextField
+                  select
+                  label="History to import"
+                  value={ha.history_days || 730}
+                  helperText="Existing imported observations are preserved."
+                  onChange={(e) => {
+                    const days = Number(e.target.value);
+                    void request(
+                      "/v1/sites/home/home-assistant/history",
+                      "POST",
+                      { days },
+                    )
+                      .then(() => setHA({ ...ha, history_days: days }))
+                      .catch((e) => onError(e.message));
+                  }}
+                >
+                  {[90, 365, 730].map((days) => (
+                    <MenuItem key={days} value={days}>
+                      {days} days
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
             )}
             {ha && (
               <Button onClick={() => setStep(1)}>
@@ -387,6 +428,30 @@ export function SetupFlow({
                 ),
               )}
             </Box>
+            <TextField
+              select
+              fullWidth
+              sx={{ mt: 2 }}
+              label="Weather forecast model"
+              value={config.weather_model || "best_match"}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  weather_model: e.target.value as Config["weather_model"],
+                })
+              }
+            >
+              {[
+                ["best_match", "Automatic best match"],
+                ["bom_access_global", "BOM ACCESS"],
+                ["ecmwf_ifs", "ECMWF IFS"],
+                ["gfs_global", "GFS"],
+              ].map(([id, label]) => (
+                <MenuItem key={id} value={id}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
             {ha && (
               <Button
                 sx={{ mt: 2 }}
@@ -447,6 +512,19 @@ export function SetupFlow({
               direction. Generation history and Open-Meteo irradiance will
               calibrate its output scale automatically.
             </Typography>
+            <SourceSelect
+              context="pv_generation"
+              label="Total AC solar generation sensor (optional)"
+              value={selected("pv_generation")}
+              sources={sources}
+              units={["W", "kW", "Wh", "kWh"]}
+              onChange={(v) => assign("pv_generation", v)}
+            />
+            <Typography variant="body2" color="text.secondary">
+              A measured AC total lets the service validate conversion from DC
+              panel banks for battery planning. Choose a sensor measuring AC
+              solar supply.
+            </Typography>
             {config.banks.map((bank, i) => (
               <Paper key={bank.id} variant="outlined" sx={{ p: 2 }}>
                 <Stack
@@ -480,6 +558,45 @@ export function SetupFlow({
                         ...config,
                         banks: config.banks.map((b) =>
                           b.id === bank.id ? { ...b, name: e.target.value } : b,
+                        ),
+                      })
+                    }
+                  />
+                  <TextField
+                    select
+                    label="Generation sensor boundary"
+                    value={bank.measurement_boundary || "unknown"}
+                    helperText="A description of the sensor, not an extra model parameter."
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        banks: config.banks.map((b) =>
+                          b.id === bank.id
+                            ? {
+                                ...b,
+                                measurement_boundary: e.target.value as
+                                  "AC" | "DC" | "unknown",
+                              }
+                            : b,
+                        ),
+                      })
+                    }
+                  >
+                    <MenuItem value="unknown">Not yet verified</MenuItem>
+                    <MenuItem value="DC">DC panel input</MenuItem>
+                    <MenuItem value="AC">AC inverter output</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Shared inverter group"
+                    value={bank.inverter_group || "main"}
+                    helperText="Banks on the same inverter use the same group name."
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        banks: config.banks.map((b) =>
+                          b.id === bank.id
+                            ? { ...b, inverter_group: e.target.value }
+                            : b,
                         ),
                       })
                     }

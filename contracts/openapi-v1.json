@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Energy Forecast",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/health/live": {
@@ -192,6 +192,203 @@
       "get": {
         "summary": "Home Assistant Status",
         "operationId": "home_assistant_status_v1_sites__site_id__home_assistant_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/home-assistant/history": {
+      "post": {
+        "summary": "History Options",
+        "operationId": "history_options_v1_sites__site_id__home_assistant_history_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/home-assistant/refresh-sensors": {
+      "post": {
+        "summary": "Refresh Ha Catalog",
+        "operationId": "refresh_ha_catalog_v1_sites__site_id__home_assistant_refresh_sensors_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/models/pv/rollback": {
+      "post": {
+        "summary": "Rollback Bank Models",
+        "operationId": "rollback_bank_models_v1_sites__site_id__models_pv_rollback_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/calendar/import-official": {
+      "post": {
+        "summary": "Import Official Calendar",
+        "operationId": "import_official_calendar_v1_sites__site_id__calendar_import_official_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sites/{site_id}/home-assistant/import-tariff": {
+      "post": {
+        "summary": "Import Ha Tariff",
+        "operationId": "import_ha_tariff_v1_sites__site_id__home_assistant_import_tariff_post",
         "parameters": [
           {
             "name": "site_id",
@@ -2832,6 +3029,37 @@
       },
       "Source": {
         "properties": {
+          "epoch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epoch"
+          },
+          "measurement_boundary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AC",
+                  "DC",
+                  "stored",
+                  "environment",
+                  "unknown"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measurement Boundary"
+          },
           "source": {
             "type": "string",
             "title": "Source"

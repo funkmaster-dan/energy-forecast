@@ -1,6 +1,6 @@
 services:
   energy-forecast:
-    image: ${ENERGY_IMAGE:-localhost/energy-forecast:0.2.0-alpha.1}
+    image: ${ENERGY_IMAGE:-localhost/energy-forecast:0.3.0-alpha.1}
     container_name: energy-forecast
     pull_policy: never
     labels:
