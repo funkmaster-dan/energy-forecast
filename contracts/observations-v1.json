@@ -69,7 +69,8 @@
             "AC",
             "DC",
             "stored",
-            "environment"
+            "environment",
+            "unknown"
           ],
           "title": "Boundary",
           "type": "string"

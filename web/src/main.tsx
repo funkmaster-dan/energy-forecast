@@ -27,12 +27,9 @@ import {
 } from "@mui/material";
 import * as echarts from "echarts";
 import type { Config, Forecast, Json, Series } from "./types";
-import {
-  CoveragePanel,
-  QualityOverlay,
-  TariffTimeline,
-  AddBank,
-} from "./panels";
+import { CoveragePanel, QualityOverlay, TariffTimeline } from "./panels";
+import { SetupFlow } from "./setup";
+import { TariffForm, CalendarForm } from "./forms";
 import "./style.css";
 
 const base = "/v1/sites/home";
@@ -62,7 +59,7 @@ const defaults: Config = {
   latitude: -34.9,
   longitude: 138.6,
   banks: [],
-  inverter_limits_kw: { main: 5 },
+  inverter_limits_kw: {},
   battery: {
     capacity_kwh: 10,
     reserve_kwh: 2,
@@ -149,53 +146,6 @@ function Metric({
         {detail}
       </Typography>
     </Paper>
-  );
-}
-function Editor({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: unknown;
-  onChange: (v: Json) => void;
-}) {
-  const [text, setText] = useState(JSON.stringify(value, null, 2));
-  const [error, setError] = useState("");
-  useEffect(() => {
-    setText(JSON.stringify(value, null, 2));
-    setError("");
-  }, [value]);
-  return (
-    <Box>
-      <TextField
-        label={label}
-        fullWidth
-        multiline
-        minRows={8}
-        maxRows={26}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        error={!!error}
-        helperText={
-          error || "Validate this section before saving the configuration."
-        }
-        inputProps={{ spellCheck: false }}
-      />
-      <Button
-        sx={{ mt: 1 }}
-        onClick={() => {
-          try {
-            onChange(JSON.parse(text));
-            setError("");
-          } catch {
-            setError("Enter valid JSON.");
-          }
-        }}
-      >
-        Validate section
-      </Button>
-    </Box>
   );
 }
 function Charts({
@@ -333,7 +283,7 @@ function Charts({
     if (banks)
       Object.keys(rows[0].banks_kw).forEach((key) =>
         line(
-          `PV ${key} (physical allocation)`,
+          `PV ${key} (${forecast.units?.[`bank:${key}`] || "kW"})`,
           0,
           rows.map((r) => r.banks_kw[key]),
         ),
@@ -545,7 +495,6 @@ function App() {
     { forecast_id: string; issued_at: string; status: string }[]
   >([]);
   const [replay, setReplay] = useState("latest");
-  const [token, setToken] = useState("");
   const [preview, setPreview] = useState<unknown>(null);
   const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
   const [review, setReview] = useState<{
@@ -576,6 +525,7 @@ function App() {
     ]);
     setSaved(c);
     setConfig(c || defaults);
+    if (!c) setTab("Setup");
     setForecast(f);
     setDiagnostics(d);
     setJobs(j);
@@ -925,144 +875,16 @@ function App() {
               </>
             )}
             {tab === "Setup" && (
-              <Stack spacing={3}>
-                <Paper sx={{ p: 3 }}>
-                  <Typography variant="h5" sx={{ mb: 3 }}>
-                    Site and measurement boundaries
-                  </Typography>
-                  <Box className="fields">
-                    {(
-                      ["name", "timezone", "latitude", "longitude"] as const
-                    ).map((key) => (
-                      <TextField
-                        key={key}
-                        label={key.replaceAll("_", " ")}
-                        value={config[key]}
-                        type={
-                          key === "latitude" || key === "longitude"
-                            ? "number"
-                            : "text"
-                        }
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            [key]:
-                              key === "latitude" || key === "longitude"
-                                ? Number(e.target.value)
-                                : e.target.value,
-                          })
-                        }
-                        inputProps={{ step: "any" }}
-                      />
-                    ))}
-                    <TextField
-                      select
-                      label="Weather model"
-                      value={config.weather_model || "best_match"}
-                      onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          weather_model: e.target
-                            .value as Config["weather_model"],
-                        })
-                      }
-                      helperText="Historical run imports use a named model."
-                    >
-                      <MenuItem value="best_match">
-                        Open-Meteo best match
-                      </MenuItem>
-                      <MenuItem value="ecmwf_ifs">ECMWF IFS</MenuItem>
-                      <MenuItem value="gfs_global">GFS global</MenuItem>
-                      <MenuItem value="bom_access_global">
-                        BOM ACCESS global
-                      </MenuItem>
-                    </TextField>
-                  </Box>
-                  <Alert severity="info" sx={{ my: 2 }}>
-                    Use gross household load at the AC bus. Keep old/new meters
-                    in one stitch profile. Sum only explicitly disjoint
-                    components. Canonical azimuth: north 0°, east 90°.
-                  </Alert>
-                  <AddBank
-                    onAdd={() =>
-                      setConfig({
-                        ...config,
-                        banks: [
-                          ...config.banks,
-                          {
-                            id: `bank_${config.banks.length + 1}`,
-                            dc_kwp: 5,
-                            tilt: 25,
-                            azimuth: 0,
-                            inverter_group: "main",
-                            conversion_efficiency: 0.96,
-                          },
-                        ],
-                      })
-                    }
-                  />
-                  <Editor
-                    label="Panel banks"
-                    value={config.banks}
-                    onChange={(v) =>
-                      setConfig({ ...config, banks: v as Config["banks"] })
-                    }
-                  />
-                  <Editor
-                    label="Input composition profiles"
-                    value={config.mappings}
-                    onChange={(v) =>
-                      setConfig({ ...config, mappings: v as Json[] })
-                    }
-                  />
-                  <Editor
-                    label="Inverter limits (kW by group)"
-                    value={config.inverter_limits_kw}
-                    onChange={(v) =>
-                      setConfig({ ...config, inverter_limits_kw: v })
-                    }
-                  />
-                  <Button
-                    variant="contained"
-                    disabled={busy}
-                    onClick={() => void action(save)}
-                  >
-                    Save site configuration
-                  </Button>
-                </Paper>
-                <Paper sx={{ p: 3 }}>
-                  <Typography variant="h5">Pair Home Assistant</Typography>
-                  <Typography sx={{ my: 2 }}>
-                    Install the HACS custom repository, then use this service’s
-                    LAN URL, site ID “home”, and a scoped integration token.
-                    Configure selected inputs in the integration options.
-                  </Typography>
-                  <Button
-                    disabled={!saved}
-                    onClick={() =>
-                      void action(async () => {
-                        const t = await api<{ token: string }>(
-                          base + "/tokens",
-                          "POST",
-                          { scope: "integration" },
-                        );
-                        setToken(t.token);
-                      })
-                    }
-                  >
-                    Create integration token
-                  </Button>
-                  {token && (
-                    <TextField
-                      sx={{ mt: 2 }}
-                      fullWidth
-                      label="Copy now — shown once"
-                      value={token}
-                      inputProps={{ readOnly: true }}
-                    />
-                  )}
-                </Paper>
-              </Stack>
+              <SetupFlow
+                config={config}
+                setConfig={setConfig}
+                saved={saved}
+                save={save}
+                request={api}
+                onError={setError}
+                onNotice={setNotice}
+                busy={busy}
+              />
             )}
             {(tab === "Tariff" || tab === "Calendars") && (
               <Stack spacing={3}>
@@ -1072,20 +894,19 @@ function App() {
                       ? "One default rule covers all dates. Higher priority rules override it; ties are rejected. Zero price and permitted grid charging are separate fields."
                       : "Choose public and school jurisdictions separately. Import official date ranges and explicitly confirm covered years; uncovered years stay unknown."}
                   </Typography>
-                  <Editor
-                    label={
-                      tab === "Tariff"
-                        ? "Fixed TOU rules"
-                        : "Calendar profiles and events"
-                    }
-                    value={tab === "Tariff" ? config.tariff : config.calendars}
-                    onChange={(v) =>
-                      setConfig({
-                        ...config,
-                        [tab === "Tariff" ? "tariff" : "calendars"]: v,
-                      })
-                    }
-                  />
+                  {tab === "Tariff" ? (
+                    <TariffForm
+                      value={config.tariff}
+                      onChange={(tariff) => setConfig({ ...config, tariff })}
+                    />
+                  ) : (
+                    <CalendarForm
+                      value={config.calendars}
+                      onChange={(calendars) =>
+                        setConfig({ ...config, calendars })
+                      }
+                    />
+                  )}
                   <Button
                     variant="contained"
                     disabled={busy}
@@ -1130,9 +951,7 @@ function App() {
                 </Paper>
                 {tab === "Calendars" && (
                   <Paper sx={{ p: 3 }}>
-                    <Typography variant="h6">
-                      Import JSON / CSV / ICS
-                    </Typography>
+                    <Typography variant="h6">Import calendar file</Typography>
                     <Typography color="text.secondary">
                       Imports are previewed before inclusion in the
                       configuration.
@@ -1369,6 +1188,16 @@ function App() {
                 ].map((title, i) => (
                   <Paper sx={{ p: 3 }} key={title}>
                     <Typography variant="h5">{title}</Typography>
+                    {i === 0 && (
+                      <>
+                        <Button
+                          onClick={() => void action(() => job("pv_calibrate"))}
+                        >
+                          Calibrate panel banks
+                        </Button>
+                        <JsonView value={diagnostics.pv_bank_calibration} />
+                      </>
+                    )}
                     <Typography color="text.secondary" sx={{ my: 2 }}>
                       {
                         [
@@ -1393,27 +1222,45 @@ function App() {
                   Stored energy and AC power
                 </Typography>
                 <Box className="fields">
-                  {Object.entries(config.battery).map(([key, value]) => (
-                    <TextField
-                      key={key}
-                      label={key.replaceAll("_", " ")}
-                      value={value}
-                      type={typeof value === "number" ? "number" : "text"}
-                      inputProps={{ step: "any" }}
-                      onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          battery: {
-                            ...config.battery,
-                            [key]:
-                              typeof value === "number"
-                                ? Number(e.target.value)
-                                : e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  ))}
+                  {Object.entries(config.battery).map(([key, value]) =>
+                    typeof value === "boolean" ? (
+                      <FormControlLabel
+                        key={key}
+                        control={
+                          <Switch
+                            checked={value}
+                            onChange={(_, checked) =>
+                              setConfig({
+                                ...config,
+                                battery: { ...config.battery, [key]: checked },
+                              })
+                            }
+                          />
+                        }
+                        label={key.replaceAll("_", " ")}
+                      />
+                    ) : (
+                      <TextField
+                        key={key}
+                        label={key.replaceAll("_", " ")}
+                        value={value}
+                        type={typeof value === "number" ? "number" : "text"}
+                        inputProps={{ step: "any" }}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            battery: {
+                              ...config.battery,
+                              [key]:
+                                typeof value === "number"
+                                  ? Number(e.target.value)
+                                  : e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    ),
+                  )}
                 </Box>
                 <TextField
                   sx={{ my: 3 }}
@@ -1672,7 +1519,7 @@ function CalendarUpload({
   onImported: (v: unknown) => void;
   onError: (e: string) => void;
 }) {
-  const [format, setFormat] = useState("json");
+  const [format, setFormat] = useState("ics");
   const [kind, setKind] = useState("school_holiday");
   const [source, setSource] = useState("Official education department");
   const [version, setVersion] = useState("2026");
@@ -1705,13 +1552,30 @@ function CalendarUpload({
         value={version}
         onChange={(e) => setVersion(e.target.value)}
       />
-      <TextField
-        multiline
-        minRows={4}
-        label="Calendar content"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-      />
+      <Button component="label" variant="outlined">
+        Choose calendar file
+        <input
+          type="file"
+          hidden
+          accept=".ics,.csv,.json"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setContent(await file.text());
+              setFormat(
+                file.name.toLowerCase().endsWith(".csv")
+                  ? "csv"
+                  : file.name.toLowerCase().endsWith(".json")
+                    ? "json"
+                    : "ics",
+              );
+            }
+          }}
+        />
+      </Button>
+      {content && (
+        <Typography variant="body2">Calendar file ready to preview.</Typography>
+      )}
       <Button
         onClick={() =>
           void api(base + "/calendars/import", "POST", {

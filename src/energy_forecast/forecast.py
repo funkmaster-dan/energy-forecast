@@ -16,7 +16,7 @@ from .tariff import boundaries, resolve
 from .weather import physical_pv
 
 
-def canonical(store, config, feature, training_cutoff=None):
+def canonical(store, config, feature, training_cutoff=None, measured=False):
     mapping = next((m for m in config.mappings if m.feature == feature), None)
     if mapping is None:
         return []
@@ -32,6 +32,15 @@ def canonical(store, config, feature, training_cutoff=None):
             "sources": [s.source for s in mapping.sources],
         }
     records = store.observations(None if mapping.mode == "derived" else feature, **options)
+    if measured:
+        records = [{**record, "boundary": "AC"} for record in records]
+        mapping = mapping.model_copy(
+            update={
+                "sources": [
+                    s.model_copy(update={"dc_to_ac_efficiency": 1}) for s in mapping.sources
+                ]
+            }
+        )
     return compose(records, mapping)
 
 
@@ -127,8 +136,19 @@ def refresh(store):
     )
     if weather_rows and (dt(weather_rows[0]["start"]) > issue or dt(weather_rows[-1]["end"]) < end):
         reason.append("weather_horizon_incomplete")
+    from .solar_calibration import geometry_signature
+
+    calibration = store.meta("pv_bank_calibration") or {}
+    scales = {
+        bank.id: calibration.get("scales", {}).get(bank.id)
+        for bank in config.banks
+        if calibration.get("banks", {}).get(bank.id, {}).get("geometry_signature")
+        == geometry_signature(config, bank)
+    }
     total_pv, banks, poa = (
-        physical_pv(config, weather_rows) if weather_rows else (np.array([]), {}, {})
+        physical_pv(config, weather_rows, learned_scales=scales)
+        if weather_rows
+        else (np.array([]), {}, {})
     )
     load, count = load_profile(store, config, weather_rows, issue)
     load_low, load_high, model_id = None, None, None
@@ -147,9 +167,18 @@ def refresh(store):
     if not weather_rows or any(v is None for v in load):
         reason.append("load_history_missing")
     if any(not np.isfinite(v) for v in total_pv):
-        reason.append("weather_fields_missing")
+        reason.append(
+            "pv_calibration_required"
+            if any(b.dc_kwp is None and b.id not in scales for b in config.banks)
+            else "weather_fields_missing"
+        )
     if not config.banks:
         reason.append("pv_geometry_missing")
+    if any(b.dc_kwp is None and b.measurement_boundary != "AC" for b in config.banks):
+        reason.append("pv_boundary_unverified")
+    # Keep individual measured-boundary bank forecasts, but never sum DC/unknown as AC.
+    if "pv_boundary_unverified" in reason:
+        total_pv = np.full(len(weather_rows), np.nan)
     soc = state(store, config, "battery_soc", issue)
     if (
         soc is None
@@ -246,6 +275,8 @@ def refresh(store):
         "weather_horizon_incomplete",
         "load_history_missing",
         "weather_fields_missing",
+        "pv_calibration_required",
+        "pv_boundary_unverified",
         "soc_stale",
         "pv_geometry_missing",
         "export_limit_missing",
@@ -413,10 +444,15 @@ def refresh(store):
         "model_versions": model_versions,
         "resolution_minutes": 60,
         "horizon_hours": 48,
-        "units": {"power": "kW AC", "energy": "kWh", "soc": "%"},
+        "units": {
+            "power": "kW AC",
+            "energy": "kWh",
+            "soc": "%",
+            **{f"bank:{b.id}": f"kW {b.measurement_boundary}" for b in config.banks},
+        },
         "assumptions": [
             "Uncalibrated baseline; shadow simulation only",
-            "Bank allocation is physical unless bank labels are validated",
+            "Bank forecasts follow selected measured boundaries; AC totals require verified AC inputs",
             "Aggregate AC boundary",
         ],
         "series": rows,

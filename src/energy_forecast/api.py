@@ -18,6 +18,7 @@ from . import security
 from .calendars import features, import_events
 from .composition import dt
 from .forecast import canonical, leased
+from .home_assistant import BridgeMetadata, ConnectionRequest
 from .jobs import Worker, enqueue
 from .schemas import Batch, Configuration, ForecastResponse, StrictModel
 from .store import Conflict, Store, now, stamp
@@ -38,6 +39,7 @@ class JobRequest(StrictModel):
         "weather",
         "forecast",
         "train",
+        "pv_calibrate",
         "calibrate",
         "weather_history",
         "weather_run",
@@ -75,7 +77,7 @@ def create_app(directory=None, start_worker=True):
         if start_worker:
             worker.shutdown()
 
-    app = FastAPI(title="Energy Forecast", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Energy Forecast", version="0.2.0", lifespan=lifespan)
     app.state.store = store
 
     @app.middleware("http")
@@ -96,7 +98,7 @@ def create_app(directory=None, start_worker=True):
             request._body = bytes(data)
         result = await call_next(request)
         result.headers["X-Content-Type-Options"] = "nosniff"
-        result.headers["Referrer-Policy"] = "same-origin"
+        result.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         result.headers["X-Frame-Options"] = "DENY"
         if request.url.path.startswith(("/v1", "/auth")):
             result.headers["Cache-Control"] = "no-store"
@@ -114,7 +116,7 @@ def create_app(directory=None, start_worker=True):
     def ready():
         with store.connect() as db:
             db.execute("SELECT 1")
-        return {"status": "ok", "export_readiness": "separate", "version": "0.1.0"}
+        return {"status": "ok", "export_readiness": "separate", "version": "0.2.0"}
 
     @app.get("/auth/status")
     def auth_status(request: Request):
@@ -194,6 +196,90 @@ def create_app(directory=None, start_worker=True):
 
     router = APIRouter(prefix="/v1/sites/{site_id}", dependencies=[Depends(site)])
 
+    @router.post("/home-assistant/connect", dependencies=[Depends(admin)])
+    def connect_home_assistant(payload: ConnectionRequest, request: Request):
+        import httpx
+
+        from .home_assistant import connect
+
+        token = security.mint(store, "integration")
+        origin = os.environ.get("ENERGY_PUBLIC_ORIGIN") or str(request.base_url).rstrip("/")
+        try:
+            result = connect(store, payload, origin, token)
+            result["integration_token"] = token if result["pairing"] != "paired" else None
+            return result
+        except (ValueError, httpx.HTTPError, KeyError) as error:
+            with store.connect() as db:
+                db.execute(
+                    "UPDATE tokens SET revoked=1 WHERE hash=?", (security.token_hash(token),)
+                )
+            raise HTTPException(
+                422, "Home Assistant connection failed. Check its URL, token and reachability."
+            ) from error
+
+    @router.get("/home-assistant", dependencies=[Depends(admin)])
+    def home_assistant_status():
+        return store.meta("ha_bridge")
+
+    @router.post("/bridge/metadata", dependencies=[Depends(ingest_auth)])
+    def bridge_metadata(payload: BridgeMetadata):
+
+        metadata = payload.model_dump(mode="json")
+        previous = store.meta("ha_bridge") or {}
+        store.meta(
+            "ha_bridge", {**previous, **metadata, "connected_at": stamp(), "pairing": "paired"}
+        )
+        return {"ok": True}
+
+    @router.get("/bridge/inputs", dependencies=[Depends(read)])
+    def bridge_inputs():
+        return store.meta("bridge_inputs") or []
+
+    @router.put("/bridge/inputs", dependencies=[Depends(admin)])
+    def bridge_inputs_save(payload: list[dict]):
+        if len(payload) > 100:
+            raise HTTPException(422, "Select at most 100 sources")
+        allowed = {
+            "source",
+            "feature",
+            "unit",
+            "kind",
+            "boundary",
+            "epoch",
+            "history",
+            "history_period",
+            "interval_seconds",
+        }
+        for source in payload:
+            if set(source) - allowed or not {
+                "source",
+                "feature",
+                "unit",
+                "kind",
+                "boundary",
+                "epoch",
+            } <= set(source):
+                raise HTTPException(422, "Invalid selected source")
+        from .schemas import Observation
+
+        for source in payload:
+            try:
+                Observation.model_validate(
+                    {
+                        key: source[key]
+                        for key in ("source", "feature", "unit", "kind", "boundary", "epoch")
+                    }
+                    | {
+                        "start": stamp(),
+                        "end": (now() + timedelta(seconds=1)).isoformat(),
+                        "value": None,
+                    }
+                )
+            except ValueError as error:
+                raise HTTPException(422, "A selected sensor has incompatible metadata") from error
+        store.meta("bridge_inputs", payload)
+        return {"ok": True}
+
     @router.get("/configuration", dependencies=[Depends(admin)])
     def get_configuration():
         return store.configuration()
@@ -207,6 +293,8 @@ def create_app(directory=None, start_worker=True):
         result = store.save_configuration(payload)
         enqueue(store, "weather")
         enqueue(store, "forecast")
+        if payload.banks:
+            enqueue(store, "pv_calibrate")
         return result
 
     @router.post("/observations", dependencies=[Depends(ingest_auth)])
@@ -338,7 +426,7 @@ def create_app(directory=None, start_worker=True):
             }
         forecast = leased(store, store.latest("forecasts"))
         return {
-            "version": "0.1.0",
+            "version": "0.2.0",
             "schema_version": 1,
             "observations": count,
             "last_ingestion": newest,
@@ -346,6 +434,7 @@ def create_app(directory=None, start_worker=True):
             "reason_codes": forecast["export_plan"]["reason_codes"],
             "jobs": job_counts,
             "battery_calibration": store.meta("battery_calibration"),
+            "pv_bank_calibration": store.meta("pv_bank_calibration"),
             "calibration": store.meta("calibration") or {"status": "insufficient_data"},
             "active_model": store.meta("active_model"),
             "learning_paused": (store.configuration() or {}).get("learning_paused", False),

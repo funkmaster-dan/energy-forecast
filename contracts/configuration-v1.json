@@ -8,11 +8,42 @@
           "title": "Id",
           "type": "string"
         },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
         "dc_kwp": {
-          "exclusiveMinimum": 0,
-          "maximum": 100,
-          "title": "Dc Kwp",
-          "type": "number"
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dc Kwp"
+        },
+        "measurement_boundary": {
+          "default": "unknown",
+          "enum": [
+            "AC",
+            "DC",
+            "unknown"
+          ],
+          "title": "Measurement Boundary",
+          "type": "string"
         },
         "tilt": {
           "maximum": 90,
@@ -53,7 +84,6 @@
       },
       "required": [
         "id",
-        "dc_kwp",
         "tilt",
         "azimuth"
       ],

@@ -44,6 +44,11 @@ def run(directory, identifier):
                 ],
                 "evaluation_eligible": available is not None,
             }
+        elif kind == "pv_calibrate":
+            from .solar_calibration import calibrate_banks
+
+            result = calibrate_banks(store, config)
+            enqueue(store, "forecast")
         elif kind == "train":
             from .learning import train
 

@@ -37,6 +37,7 @@ def fetch(config, store, historical=None, run=None, available_at=None):
         start, end = historical
         if (end - start).days > 31 or end < start:
             raise ValueError("Weather history pages must be 0–31 days")
+        params.pop("models", None)
         params.update(start_date=start.isoformat(), end_date=end.isoformat())
         url = "https://archive-api.open-meteo.com/v1/archive"
         kind = "reanalysis_pretraining_only"
@@ -89,7 +90,7 @@ def fetch(config, store, historical=None, run=None, available_at=None):
     return document
 
 
-def physical_pv(config, intervals):
+def physical_pv(config, intervals, learned_scales=None):
     times = pd.DatetimeIndex(
         [
             pd.Timestamp(r["start"]) + (pd.Timestamp(r["end"]) - pd.Timestamp(r["start"])) / 2
@@ -135,17 +136,26 @@ def physical_pv(config, intervals):
         )
         cell_temp = temp + irradiance * 0.025
         power = (
-            bank.dc_kwp
+            (
+                bank.dc_kwp
+                if bank.dc_kwp is not None
+                else (learned_scales or {}).get(bank.id, float("nan"))
+            )
             * irradiance
             / 1000
             * np.maximum(0, 1 - 0.004 * (cell_temp - 25))
-            * bank.conversion_efficiency
+            * (bank.conversion_efficiency if bank.dc_kwp is not None else 1)
         )
         banks[bank.id], poa[bank.id] = power, irradiance
         groups.setdefault(bank.inverter_group, []).append(bank.id)
     for group, members in groups.items():
         total = sum(banks[key] for key in members)
-        factor = np.minimum(1, config.inverter_limits_kw[group] / np.maximum(total, 1e-9))
+        limit = config.inverter_limits_kw.get(group)
+        factor = (
+            np.minimum(1, limit / np.maximum(total, 1e-9))
+            if limit is not None
+            else np.ones_like(total)
+        )
         for key in members:
             banks[key] *= factor
     total = sum(banks.values(), np.zeros(len(intervals)))

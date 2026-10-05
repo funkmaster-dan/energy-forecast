@@ -10,7 +10,9 @@ export type Config = {
     "best_match" | "ecmwf_ifs" | "gfs_global" | "bom_access_global";
   banks: {
     id: string;
-    dc_kwp: number;
+    name?: string;
+    dc_kwp?: number | null;
+    measurement_boundary?: "AC" | "DC" | "unknown";
     tilt: number;
     azimuth: number;
     inverter_group: string;
@@ -72,6 +74,7 @@ export type Schedule = {
   };
 };
 export type Forecast = {
+  units?: Record<string, string>;
   forecast_id: string | null;
   status: string;
   issued_at?: string;

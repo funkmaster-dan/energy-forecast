@@ -1,6 +1,6 @@
 # Configuration examples
 
-Full validated fields are in `contracts/configuration-v1.json`. The GUI keeps an editable draft; validate each JSON section, then save the configuration. Resolved-date previews use the saved revision. Source names below are placeholders, not a commissioned installation.
+Full validated fields are in `contracts/configuration-v1.json`. The GUI provides forms for location, sources, panel banks, batteries, tariff rules and calendars. Save the draft configuration after reviewing it; no JSON editing is required. The examples below document the API for developers. Resolved-date previews use the saved revision. Source names below are placeholders, not a commissioned installation.
 
 ## Source composition
 

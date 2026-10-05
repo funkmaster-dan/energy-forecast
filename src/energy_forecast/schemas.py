@@ -28,7 +28,7 @@ class Observation(StrictModel):
     value: float | None
     unit: Literal["W", "kW", "Wh", "kWh", "%", "°C", "W/m²"]
     kind: Literal["mean_power", "interval_energy", "counter", "state"]
-    boundary: Literal["AC", "DC", "stored", "environment"]
+    boundary: Literal["AC", "DC", "stored", "environment", "unknown"]
     revision: int = Field(default=0, ge=0)
     provenance: Literal["live", "statistics", "raw_history"] = "live"
     quality: Quality = Quality.valid
@@ -103,7 +103,9 @@ class Mapping(StrictModel):
 
 class Bank(StrictModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,31}$")
-    dc_kwp: float = Field(gt=0, le=100)
+    name: str | None = Field(default=None, max_length=100)
+    dc_kwp: float | None = Field(default=None, gt=0, le=100)
+    measurement_boundary: Literal["AC", "DC", "unknown"] = "unknown"
     tilt: float = Field(ge=0, le=90)
     azimuth: float = Field(ge=0, lt=360)
     inverter_group: str = "main"
@@ -205,7 +207,7 @@ class Configuration(StrictModel):
         "best_match"
     )
     banks: list[Bank] = Field(default_factory=list, max_length=50)
-    inverter_limits_kw: dict[str, float] = Field(default_factory=lambda: {"main": 5})
+    inverter_limits_kw: dict[str, float] = Field(default_factory=dict)
     battery: Battery = Field(default_factory=Battery)
     mappings: list[Mapping] = Field(default_factory=list)
     tariff: list[TariffRule] = Field(min_length=1, max_length=100)
@@ -240,8 +242,11 @@ class Configuration(StrictModel):
         if len({b.id for b in self.banks}) != len(self.banks):
             raise ValueError("Bank IDs must be unique")
         for bank in self.banks:
-            if self.inverter_limits_kw.get(bank.inverter_group, 0) <= 0:
-                raise ValueError("Each bank needs a positive inverter group limit")
+            if (
+                bank.inverter_group in self.inverter_limits_kw
+                and self.inverter_limits_kw[bank.inverter_group] <= 0
+            ):
+                raise ValueError("Known inverter limits must be positive")
         if len({m.feature for m in self.mappings}) != len(self.mappings):
             raise ValueError("Mapping features must be unique")
         if (

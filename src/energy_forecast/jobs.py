@@ -15,6 +15,7 @@ KINDS = {
     "weather",
     "forecast",
     "train",
+    "pv_calibrate",
     "calibrate",
     "weather_history",
     "weather_run",
@@ -122,6 +123,7 @@ class Worker:
             "forecast": 60,
             "calibrate": 3600,
             "train": 604800,
+            "pv_calibrate": 86400,
             "bias": 3600,
             "adapt": 86400,
         }
