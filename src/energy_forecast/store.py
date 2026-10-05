@@ -51,6 +51,8 @@ class Store:
             CREATE TABLE IF NOT EXISTS weather(id TEXT PRIMARY KEY, received TEXT, configuration_hash TEXT, payload TEXT);
             CREATE TABLE IF NOT EXISTS forecasts(id TEXT PRIMARY KEY, created TEXT, configuration_hash TEXT, payload TEXT);
             CREATE INDEX IF NOT EXISTS forecasts_created ON forecasts(created);
+            CREATE INDEX IF NOT EXISTS forecasts_issue ON forecasts(json_extract(payload,'$.issued_at'));
+            CREATE INDEX IF NOT EXISTS weather_origin ON weather(COALESCE(json_extract(payload,'$.provider_available_at'),json_extract(payload,'$.provider_run_at'),received));
             CREATE INDEX IF NOT EXISTS weather_received ON weather(received);
             CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, kind TEXT, status TEXT, created TEXT, updated TEXT, payload TEXT);
             CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, created TEXT, action TEXT, payload TEXT);
@@ -241,14 +243,18 @@ class Store:
             raise ValueError("Unsupported journal")
         from datetime import timedelta
 
-        field = "received" if table == "weather" else "created"
+        field = (
+            "COALESCE(json_extract(payload,'$.provider_available_at'),json_extract(payload,'$.provider_run_at'),received)"
+            if table == "weather"
+            else "json_extract(payload,'$.issued_at')"
+        )
         cursor = "0001-01-01T00:00:00+00:00"
         for _ in range(limit):
             condition = " AND configuration_hash=?" if config_hash else ""
             arguments = [cursor] + ([config_hash] if config_hash else [])
             with self.connect() as db:
                 row = db.execute(
-                    f"SELECT {field},payload FROM {table} WHERE {field}>?"
+                    f"SELECT {field} AS origin,payload FROM {table} WHERE {field}>?"
                     + condition
                     + f" ORDER BY {field} LIMIT 1",
                     arguments,
@@ -256,7 +262,9 @@ class Store:
             if row is None:
                 return
             yield json.loads(row["payload"])
-            cursor = (datetime.fromisoformat(row[field]) + timedelta(hours=step_hours)).isoformat()
+            cursor = (
+                datetime.fromisoformat(row["origin"]) + timedelta(hours=step_hours)
+            ).isoformat()
 
     def latest(self, table):
         values = self.documents(table, 1)

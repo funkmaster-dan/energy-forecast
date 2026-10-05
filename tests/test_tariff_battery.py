@@ -120,3 +120,15 @@ def test_joint_policy_one_power_and_terminal_bounds(config):
     assert not np.any(result["failed"])
     assert np.all(result["terminal_kwh"] >= 2)
     assert 0 <= power <= config.battery.discharge_kw
+
+
+def test_free_grid_charging_shares_headroom_with_pv_and_inverter(config):
+    tariff = interval(config)["tariff"]
+    tariff.update(import_rate=0, grid_charge_allowed=True)
+    config.battery.charge_kw = 5
+    config.shared_inverter_kw = 3
+    result = simulate(config, [interval(config, 1, tariff)], [1], [0], 2, conditional=True)
+    assert result["series"][0]["charge_kw"] == 3
+    assert result["series"][0]["grid_import_kw"] == 2
+    assert result["series"][0]["grid_export_kw"] == 0
+    assert result["terminal_kwh"][0] == pytest.approx(2 + 3 * config.battery.eta_charge)

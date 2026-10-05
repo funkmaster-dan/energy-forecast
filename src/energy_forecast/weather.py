@@ -15,6 +15,8 @@ FIELDS = "temperature_2m,shortwave_radiation,direct_normal_irradiance,diffuse_ra
 
 
 def fetch(config, store, historical=None, run=None, available_at=None):
+    run = run.astimezone(UTC) if run else None
+    available_at = available_at.astimezone(UTC) if available_at else None
     params = {
         "latitude": config.latitude,
         "longitude": config.longitude,

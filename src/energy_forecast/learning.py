@@ -269,7 +269,9 @@ def train(store, config, job):
     }
     store.insert_document("models", identifier, bundle)
     checkpoint.unlink(missing_ok=True)
-    if bundle["promotion_eligible"]:
+    if bundle["promotion_eligible"] and not (store.configuration() or {}).get(
+        "learning_paused", True
+    ):
         activate_model(store, identifier)
     return {"status": "trained", "model": bundle, "pv": train_pv(store, config, cutoff)}
 
@@ -630,24 +632,31 @@ def adapt_recent(store, config, daily=False):
         if daily
         else {}
     )
-    old_error = float(np.mean([abs(residuals[t]) for t in validation]))
-    new_error = float(
-        np.mean(
-            [
-                abs(
-                    residuals[t]
-                    - fit_profile.get(
-                        f"{t.astimezone(ZoneInfo(config.timezone)).weekday()}:{t.astimezone(ZoneInfo(config.timezone)).hour}",
-                        fit_bias,
-                    )
-                )
-                for t in validation
-            ]
+    previous = store.meta("recent_bias") or {}
+    if previous.get("model_id") != identifier:
+        previous = {}
+    previous_global = previous.get("load_kw", 0)
+    previous_profile = previous.get("profile", {})
+    candidate_global = float(np.clip(previous_global + fit_bias, -cap, cap))
+    candidate_profile = dict(previous_profile)
+    if daily:
+        for key, delta in fit_profile.items():
+            candidate_profile[key] = float(
+                np.clip(previous_profile.get(key, previous_global) + delta, -cap, cap)
+            )
+
+    def effective_delta(timestamp):
+        local = timestamp.astimezone(ZoneInfo(config.timezone))
+        key = f"{local.weekday()}:{local.hour}"
+        return candidate_profile.get(key, candidate_global) - previous_profile.get(
+            key, previous_global
         )
-    )
+
+    old_error = float(np.mean([abs(residuals[t]) for t in validation]))
+    new_error = float(np.mean([abs(residuals[t] - effective_delta(t)) for t in validation]))
     report.update(
-        load_kw=fit_bias,
-        profile=fit_profile,
+        load_kw=candidate_global,
+        profile=candidate_profile,
         validation={
             "start": validation[0].isoformat(),
             "end": validation[-1].isoformat(),
@@ -661,6 +670,8 @@ def adapt_recent(store, config, daily=False):
             "status": "not_promoted",
             "reason": "Recent held-out error did not improve",
         }
+    if (store.configuration() or {}).get("learning_paused", True):
+        return {**report, "status": "not_promoted", "reason": "Learning paused during evaluation"}
     store.meta("recent_bias", report)
     store.meta("invalidated_at", stamp())
     store.audit(

@@ -33,7 +33,11 @@ def enqueue(store, kind, options=None, scheduled=False):
             "SELECT payload FROM jobs WHERE kind=? AND status IN ('queued','running')", (kind,)
         ).fetchone()
         if existing:
-            return json.loads(existing[0])
+            existing_job = json.loads(existing[0])
+            if existing_job["options"] == (options or {}):
+                return existing_job
+            if kind not in ("weather_history", "weather_run"):
+                raise ValueError("A different job of this kind is already queued")
         queued = db.execute(
             "SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')"
         ).fetchone()[0]

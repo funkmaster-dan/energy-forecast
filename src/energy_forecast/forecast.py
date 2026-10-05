@@ -67,7 +67,7 @@ def state(store, config, feature, issue):
         timestamp = dt(row["end"])
         if (
             s
-            and row.get("provenance", "live") == "live"
+            and row.get("provenance") == "live"
             and row["quality"] == "valid"
             and row["value"] is not None
             and timestamp <= issue

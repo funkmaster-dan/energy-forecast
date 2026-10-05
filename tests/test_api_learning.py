@@ -237,3 +237,49 @@ def test_recent_soc_statistics_cannot_freshen_a_live_state(store, config):
     assert (
         issue - datetime.fromisoformat(result["end"])
     ).total_seconds() > config.soc_freshness_seconds
+
+
+def test_recent_adapter_updates_existing_correction_instead_of_replacing_it(
+    store, config, monkeypatch
+):
+    from conftest import ingest, observation
+
+    from energy_forecast.learning import adapt_recent
+
+    store.save_configuration(config)
+    store.meta("active_model", "test-model")
+    store.meta("recent_bias", {"model_id": "test-model", "load_kw": 0.1, "profile": {}})
+    end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    records = []
+    snapshots = []
+    for i in range(9 * 24):
+        start = end - timedelta(hours=9 * 24 - i)
+        record = observation(1200).model_copy(
+            update={"start": start, "end": start + timedelta(hours=1)}
+        )
+        records.append(record)
+        snapshots.append(
+            {
+                "model_versions": {"load": "test-model"},
+                "series": [
+                    {"start": start.isoformat(), "end": record.end.isoformat(), "load_kw": 1.1}
+                ],
+            }
+        )
+    ingest(store, *records)
+    monkeypatch.setattr(store, "origins", lambda *args, **kwargs: iter(snapshots))
+    result = adapt_recent(store, config)
+    assert result["status"] == "shadow"
+    assert result["load_kw"] > 0.1
+    assert result["validation"]["new_mae_kw"] < result["validation"]["old_mae_kw"]
+
+
+def test_backfilled_weather_origins_use_run_availability_not_import_time(store):
+    for identifier, day in [("first", "2026-01-01"), ("second", "2026-01-02")]:
+        store.insert_document(
+            "weather",
+            identifier,
+            {"id": identifier, "provider_available_at": day + "T05:00:00+00:00"},
+            "synthetic",
+        )
+    assert [r["id"] for r in store.origins("weather", step_hours=12)] == ["first", "second"]

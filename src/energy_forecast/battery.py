@@ -57,7 +57,7 @@ def simulate(config, intervals, pv, load, initial_kwh, export_kw=0.0, conditiona
         taper = np.clip(
             (b.upper_kwh - energy) / max(0.01, b.upper_kwh * (1 - b.taper_start_pct / 100)), 0, 1
         )
-        charge_limit = b.charge_kw * taper
+        charge_limit = min(b.charge_kw, shared) * taper
         charge = np.minimum(
             surplus,
             np.minimum(charge_limit, np.maximum(0, b.upper_kwh - energy) / b.eta_charge / dt),
@@ -76,7 +76,7 @@ def simulate(config, intervals, pv, load, initial_kwh, export_kw=0.0, conditiona
                 / dt,
             )
             grid_charge = np.minimum(grid_charge, np.maximum(0, import_limit - import_power))
-            grid_charge = np.where((discharge <= 1e-9) & (surplus <= 1e-9), grid_charge, 0)
+            grid_charge = np.where((discharge <= 1e-9) & (surplus - charge <= 1e-9), grid_charge, 0)
         base_export = np.minimum(np.maximum(0, surplus - charge), export_headroom)
         can_export = (
             (deficit <= 1e-9) & (charge <= 1e-9) & (grid_charge <= 1e-9) & (import_power <= 1e-9)
