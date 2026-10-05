@@ -2411,6 +2411,16 @@
             "title": "Revision",
             "default": 0
           },
+          "provenance": {
+            "type": "string",
+            "enum": [
+              "live",
+              "statistics",
+              "raw_history"
+            ],
+            "title": "Provenance",
+            "default": "live"
+          },
           "quality": {
             "$ref": "#/components/schemas/Quality",
             "default": "valid"

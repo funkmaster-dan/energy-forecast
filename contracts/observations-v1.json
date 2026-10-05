@@ -80,6 +80,16 @@
           "title": "Revision",
           "type": "integer"
         },
+        "provenance": {
+          "default": "live",
+          "enum": [
+            "live",
+            "statistics",
+            "raw_history"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
         "quality": {
           "$ref": "#/$defs/Quality",
           "default": "valid"

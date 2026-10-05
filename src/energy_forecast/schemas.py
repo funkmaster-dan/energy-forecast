@@ -30,6 +30,7 @@ class Observation(StrictModel):
     kind: Literal["mean_power", "interval_energy", "counter", "state"]
     boundary: Literal["AC", "DC", "stored", "environment"]
     revision: int = Field(default=0, ge=0)
+    provenance: Literal["live", "statistics", "raw_history"] = "live"
     quality: Quality = Quality.valid
     reasons: list[str] = Field(default_factory=list, max_length=20)
     coverage: float = Field(default=1, ge=0, le=1)

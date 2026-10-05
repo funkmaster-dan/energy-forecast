@@ -202,3 +202,38 @@ def test_invalid_timezone_is_a_validation_error(tmp_path, config):
     payload = config.model_dump(mode="json")
     payload["timezone"] = "Australia/NotAPlace"
     assert client.put("/v1/sites/home/configuration", json=payload).status_code == 422
+
+
+def test_recent_soc_statistics_cannot_freshen_a_live_state(store, config):
+    from conftest import ingest, observation
+
+    from energy_forecast.forecast import state
+    from energy_forecast.schemas import Mapping
+
+    config.mappings.append(Mapping(feature="battery_soc", sources=[{"source": "sensor.soc"}]))
+    issue = datetime.now(timezone.utc)
+    live = observation(80, "sensor.soc").model_copy(
+        update={
+            "feature": "battery_soc",
+            "kind": "state",
+            "unit": "%",
+            "boundary": "stored",
+            "start": issue - timedelta(minutes=15, seconds=1),
+            "end": issue - timedelta(minutes=15),
+            "provenance": "live",
+        }
+    )
+    statistics = live.model_copy(
+        update={
+            "start": issue - timedelta(hours=1),
+            "end": issue - timedelta(seconds=10),
+            "value": 90,
+            "provenance": "statistics",
+        }
+    )
+    ingest(store, live, statistics)
+    result = state(store, config, "battery_soc", issue)
+    assert result["value"] == 80
+    assert (
+        issue - datetime.fromisoformat(result["end"])
+    ).total_seconds() > config.soc_freshness_seconds
