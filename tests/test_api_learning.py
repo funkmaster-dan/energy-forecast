@@ -195,3 +195,10 @@ def test_archived_overlay_only_shows_completed_actuals(tmp_path, config):
     assert response.status_code == 200, response.text
     assert response.json()["observed_series"][0]["load_kw"] == 1
     assert response.json()["observed_series"][1]["load_kw"] is None
+
+
+def test_invalid_timezone_is_a_validation_error(tmp_path, config):
+    client, _ = client_with_admin(tmp_path)
+    payload = config.model_dump(mode="json")
+    payload["timezone"] = "Australia/NotAPlace"
+    assert client.put("/v1/sites/home/configuration", json=payload).status_code == 422

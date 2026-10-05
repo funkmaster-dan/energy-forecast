@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime, time
 from enum import StrEnum
 from typing import Literal
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -228,7 +228,10 @@ class Configuration(StrictModel):
     @field_validator("timezone")
     @classmethod
     def timezone_valid(cls, value):
-        ZoneInfo(value)
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("Use a valid IANA timezone") from error
         return value
 
     @model_validator(mode="after")

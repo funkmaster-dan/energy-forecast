@@ -80,6 +80,8 @@ def validate(config):
             day = datetime(year, month, 10).date()
             days.update(day + timedelta(days=i) for i in range(7))
     for rule in config.tariff:
+        if rule.start.tzinfo or rule.end.tzinfo:
+            raise ValueError("Tariff times must be local wall times without an offset")
         if rule.start.second or rule.end.second or rule.start.microsecond or rule.end.microsecond:
             raise ValueError("Tariff times must have minute precision")
         for day in rule.dates:
