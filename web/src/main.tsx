@@ -955,6 +955,28 @@ function App() {
                         inputProps={{ step: "any" }}
                       />
                     ))}
+                    <TextField
+                      select
+                      label="Weather model"
+                      value={config.weather_model || "best_match"}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          weather_model: e.target
+                            .value as Config["weather_model"],
+                        })
+                      }
+                      helperText="Historical run imports use a named model."
+                    >
+                      <MenuItem value="best_match">
+                        Open-Meteo best match
+                      </MenuItem>
+                      <MenuItem value="ecmwf_ifs">ECMWF IFS</MenuItem>
+                      <MenuItem value="gfs_global">GFS global</MenuItem>
+                      <MenuItem value="bom_access_global">
+                        BOM ACCESS global
+                      </MenuItem>
+                    </TextField>
                   </Box>
                   <Alert severity="info" sx={{ my: 2 }}>
                     Use gross household load at the AC bus. Keep old/new meters
@@ -1351,7 +1373,7 @@ function App() {
                       {
                         [
                           "Per-bank output uses a physical allocation until independently measured targets support fitting. PV trees require matching archived weather vintages.",
-                          "View candidate versus weekday baseline metrics and declared train/calibration/test ranges in Models. Weather features remain disabled until vintage coverage supports validation.",
+                          "View candidate versus weekday baseline metrics and declared train/calibration/test ranges in Models. Weather features are checked against the calendar-only model using matching issue-time forecasts and disjoint holdouts.",
                           "Interval ranges and whole-horizon risk are separate. Complete paired residual blocks retain temporal and PV/load dependence. Insufficient tail evidence keeps export disabled.",
                           "Configured efficiencies remain active until independently measured AC flows and stored-energy changes identify separate charge/discharge efficiencies. No test cycling is performed.",
                         ][i]

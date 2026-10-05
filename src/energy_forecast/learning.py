@@ -11,6 +11,8 @@ from .composition import dt
 from .forecast import canonical
 from .jobs import update
 from .store import digest, now, stamp
+from .weather_features import features as weather_features
+from .weather_features import source_epoch as weather_source_epoch
 
 CONTEXT = 168
 HORIZON = 49  # fractional first + last bins cover a rolling 48-hour request
@@ -92,7 +94,7 @@ def partition_samples(targets, zone):
     return samples, {k: [a.isoformat(), b.isoformat()] for k, (a, b) in ranges.items()}, None
 
 
-def network():
+def network(future_dimensions=6):
     import torch
     from torch import nn
 
@@ -110,7 +112,9 @@ def network():
             super().__init__()
             self.input = nn.Conv1d(1, 32, 1)
             self.blocks = nn.Sequential(*(CausalBlock(d) for d in (1, 2, 4, 8, 16, 32, 64)))
-            self.head = nn.Sequential(nn.Linear(32 + 6, 32), nn.ReLU(), nn.Linear(32, 3))
+            self.head = nn.Sequential(
+                nn.Linear(32 + future_dimensions, 32), nn.ReLU(), nn.Linear(32, 3)
+            )
 
         def forward(self, history, future):
             context = self.blocks(torch.relu(self.input(history[:, None, :])))[:, :, -1]
@@ -171,7 +175,13 @@ def train(store, config, job):
     directory = store.root / "models"
     directory.mkdir(exist_ok=True)
     checkpoint = directory / f"checkpoint-{job['id']}.pt"
-    identity = digest({"ranges": ranges, "targets": {t.isoformat(): v for t, v in targets.items()}})
+    identity = digest(
+        {
+            "ranges": ranges,
+            "timezone": config.timezone,
+            "targets": {t.isoformat(): v for t, v in targets.items()},
+        }
+    )
     first_epoch = 0
     if checkpoint.exists():
         saved = torch.load(checkpoint, weights_only=True)
@@ -246,6 +256,10 @@ def train(store, config, job):
         "id": identifier,
         "created_at": stamp(),
         "kind": "tcn-calendar-quantile-v2",
+        "future_dimensions": 6,
+        "input_watermark": job["created_at"],
+        "input_data_hash": identity,
+        "timezone": config.timezone,
         "scale": scale,
         "configuration_hash": digest(config.model_dump(mode="json")),
         "ranges": ranges,
@@ -273,7 +287,14 @@ def train(store, config, job):
         "learning_paused", True
     ):
         activate_model(store, identifier)
-    return {"status": "trained", "model": bundle, "pv": train_pv(store, config, cutoff)}
+    from .weather_learning import train_candidate
+
+    return {
+        "status": "trained",
+        "model": bundle,
+        "weather_candidate": train_candidate(store, config, job, targets),
+        "pv": train_pv(store, config, cutoff),
+    }
 
 
 def activate_model(store, identifier):
@@ -288,6 +309,15 @@ def activate_model(store, identifier):
         config = store.configuration()
         if bundle["source_signature"] != digest(config["mappings"]):
             raise ValueError("Source mapping changed; retrain before promotion")
+        if bundle.get("timezone", config["timezone"]) != config["timezone"]:
+            raise ValueError("Site timezone changed; retrain before promotion")
+        if bundle.get("weather_epoch"):
+            from .schemas import Configuration
+
+            if bundle["weather_epoch"] != weather_source_epoch(
+                Configuration.model_validate(config)
+            ):
+                raise ValueError("Weather source changed; retrain before promotion")
         active = store.meta("active_model")
         if active == identifier:
             return {"active_model": identifier, "unchanged": True}
@@ -309,7 +339,7 @@ def activate_model(store, identifier):
     return {"active_model": identifier, "export_ready": False}
 
 
-def predict_load(store, config, times, baseline, issue):
+def predict_load(store, config, times, baseline, issue, weather=None, weather_rows=None):
     identifier = store.meta("active_model")
     if not identifier:
         return baseline, None, None, None
@@ -318,6 +348,25 @@ def predict_load(store, config, times, baseline, issue):
         [m.model_dump(mode="json") for m in config.mappings]
     ):
         return baseline, None, None, None
+    if bundle.get("timezone", config.timezone) != config.timezone:
+        return baseline, None, None, None
+    dimensions = bundle.get("future_dimensions", 6)
+    future = time_features(times, config.timezone)
+    if dimensions == 8:
+        if (
+            not weather
+            or not weather_rows
+            or bundle.get("weather_epoch") != weather_source_epoch(config)
+            or weather.get("source_epoch") != bundle.get("weather_epoch")
+            or not 0
+            <= (issue - dt(weather["received_at"])).total_seconds()
+            <= config.weather_freshness_seconds
+        ):
+            return baseline, None, None, None
+        environmental = weather_features(weather_rows)
+        if environmental is None or len(environmental) != len(times):
+            return baseline, None, None, None
+        future = np.concatenate((future, environmental), axis=1)
     targets = hourly_targets(store, config, "household_load", issue)
     anchor = times[0].replace(minute=0, second=0, microsecond=0)
     history_times = [anchor - timedelta(hours=CONTEXT - i) for i in range(CONTEXT)]
@@ -325,16 +374,13 @@ def predict_load(store, config, times, baseline, issue):
         return baseline, None, None, None
     import torch
 
-    model = network()
+    model = network(dimensions)
     model.load_state_dict(torch.load(store.root / "models" / f"{identifier}.pt", weights_only=True))
     model.eval()
     h = np.array([[targets[t] for t in history_times]], dtype=np.float32) / bundle["scale"]
     with torch.no_grad():
         predicted_quantiles = (
-            model(
-                torch.tensor(h), torch.tensor(time_features(times, config.timezone)[None, :, :])
-            ).numpy()[0]
-            * bundle["scale"]
+            model(torch.tensor(h), torch.tensor(future[None, :, :])).numpy()[0] * bundle["scale"]
         )
     values = predicted_quantiles[:, 1]
     # Bounded recent residual profile; only completed observations and previous predictions.

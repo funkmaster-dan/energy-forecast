@@ -6,6 +6,8 @@ export type Config = {
   timezone: string;
   latitude: number;
   longitude: number;
+  weather_model?:
+    "best_match" | "ecmwf_ifs" | "gfs_global" | "bom_access_global";
   banks: {
     id: string;
     dc_kwp: number;

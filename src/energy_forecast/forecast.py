@@ -126,7 +126,13 @@ def refresh(store):
         from .learning import predict_load
 
         load, load_low, load_high, model_id = predict_load(
-            store, config, [dt(r["start"]) for r in weather_rows], load, issue
+            store,
+            config,
+            [dt(r["start"]) for r in weather_rows],
+            load,
+            issue,
+            weather=weather,
+            weather_rows=weather_rows,
         )
     if not weather_rows or any(v is None for v in load):
         reason.append("load_history_missing")

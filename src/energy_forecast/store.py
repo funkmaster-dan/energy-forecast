@@ -53,6 +53,7 @@ class Store:
             CREATE INDEX IF NOT EXISTS forecasts_created ON forecasts(created);
             CREATE INDEX IF NOT EXISTS forecasts_issue ON forecasts(json_extract(payload,'$.issued_at'));
             CREATE INDEX IF NOT EXISTS weather_origin ON weather(COALESCE(json_extract(payload,'$.provider_available_at'),json_extract(payload,'$.provider_run_at'),received));
+            CREATE INDEX IF NOT EXISTS weather_epoch_available ON weather(json_extract(payload,'$.source_epoch'), COALESCE(json_extract(payload,'$.provider_available_at'),received));
             CREATE INDEX IF NOT EXISTS weather_received ON weather(received);
             CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, kind TEXT, status TEXT, created TEXT, updated TEXT, payload TEXT);
             CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, created TEXT, action TEXT, payload TEXT);
